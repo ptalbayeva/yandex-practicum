@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -18,33 +19,37 @@ func NewHandler(s *service.ShortenerService) *Handler {
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	if r.Header.Get("Content-Type") != "text/plain" {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "content type must be text/plain", http.StatusBadRequest)
+		return
 	}
 
 	body, err := io.ReadAll(r.Body)
-	originalURL := strings.TrimSpace(string(body))
-
-	if originalURL == "" {
-		http.Error(w, "Missing URL", http.StatusBadRequest)
-		return
-	}
-
-	u, err := h.shortener.Shorten(string(body))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	short := "http://localhost:8080/" + u.Code + "/"
 
+	originalURL := strings.TrimSpace(string(body))
+	if originalURL == "" {
+		http.Error(w, "missing url", http.StatusBadRequest)
+		return
+	}
+
+	u, err := h.shortener.Shorten(originalURL)
+	if err != nil {
+		http.Error(w, "failed to shorten", http.StatusInternalServerError)
+		return
+	}
+
+	fullURL := fmt.Sprintf("http://%s/%s", r.Host, u.Code)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-
-	_, err = w.Write([]byte(short))
+	_, err = w.Write([]byte(fullURL))
 
 	if err != nil {
 		http.Error(w, "Error shortening URL", http.StatusInternalServerError)
@@ -53,15 +58,11 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}
-
 	code := r.PathValue("id")
 
 	u, err := h.shortener.Resolve(code)
-	if err != nil {
-		http.Error(w, "Error", http.StatusInternalServerError)
+	if err != nil || u == nil {
+		http.NotFound(w, r)
 		return
 	}
 

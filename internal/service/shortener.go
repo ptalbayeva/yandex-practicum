@@ -20,7 +20,7 @@ func NewShortenerService(repo repository.UrlRepository) *ShortenerService {
 }
 
 func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
-	code := s.HashUrl(original)
+	code := s.HashURL(original)
 	u := model.New(code, original)
 
 	if err := s.repo.Save(u); err != nil {
@@ -40,7 +40,7 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	return u, nil
 }
 
-func (s *ShortenerService) HashUrl(original string) string {
+func (s *ShortenerService) HashURL(original string) string {
 	hash := sha256.Sum256([]byte(original))
 	encoded := base64.URLEncoding.EncodeToString(hash[:])
 

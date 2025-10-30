@@ -11,10 +11,10 @@ import (
 )
 
 type ShortenerService struct {
-	repo repository.UrlRepository
+	repo repository.URLRepository
 }
 
-func NewShortenerService(repo repository.UrlRepository) *ShortenerService {
+func NewShortenerService(repo repository.URLRepository) *ShortenerService {
 	return &ShortenerService{repo: repo}
 }
 
@@ -33,7 +33,7 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	u, err := s.repo.FindByCode(code)
 
 	if err != nil {
-		return nil, errors.New("Not found")
+		return nil, errors.New("not found")
 	}
 
 	return u, nil

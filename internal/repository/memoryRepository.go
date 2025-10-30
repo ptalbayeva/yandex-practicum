@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/yandex-practicum/shorten-url/internal/model"
 )
@@ -27,7 +26,7 @@ func (r *MemoryRepo) FindByCode(code string) (*model.URL, error) {
 	u, ok := r.data[code]
 
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("url with code %s not found", code))
+		return nil, errors.New("not found")
 	}
 
 	return u, nil

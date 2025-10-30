@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/yandex-practicum/shorten-url/internal/model"
@@ -34,7 +33,7 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	u, err := s.repo.FindByCode(code)
 
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("shorten code %s not found", code))
+		return nil, errors.New("Not found")
 	}
 
 	return u, nil

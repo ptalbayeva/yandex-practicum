@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 )
 
@@ -58,7 +59,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
-	code := r.PathValue("id")
+	code := chi.URLParam(r, "id")
 
 	u, err := h.shortener.Resolve(code)
 	if err != nil || u == nil {

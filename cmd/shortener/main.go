@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
@@ -19,9 +20,9 @@ func run() error {
 	shortenerService := service.NewShortenerService(repo)
 	urlHandler := handler.NewHandler(shortenerService)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /", urlHandler.Shorten)
-	mux.HandleFunc("GET /{id}", urlHandler.Redirect)
+	r := chi.NewRouter()
+	r.Post("/", urlHandler.Shorten)
+	r.Get("/{id}", urlHandler.Redirect)
 
-	return http.ListenAndServe(`:8080`, mux)
+	return http.ListenAndServe(`:8080`, r)
 }

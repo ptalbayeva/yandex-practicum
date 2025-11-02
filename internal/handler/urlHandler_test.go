@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex-practicum/shorten-url/internal/model"
@@ -98,6 +99,21 @@ func Test_Shorten(t *testing.T) {
 	}
 }
 
+func getTestRouter(t *testing.T, url *model.URL) chi.Router {
+	r := chi.NewRouter()
+
+	repo := repository.NewMemoryRepo()
+	repo.Save(url)
+	require.NoError(t, repo.Save(url))
+
+	s := service.NewShortenerService(repo)
+	handler := http.HandlerFunc(NewHandler(s).Redirect)
+
+	r.Get("/{id}", handler)
+
+	return r
+}
+
 func Test_Redirect(t *testing.T) {
 	type want struct {
 		code     int
@@ -136,18 +152,12 @@ func Test_Redirect(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
+			r := getTestRouter(t, test.URL)
 
-			repo := repository.NewMemoryRepo()
-			repo.Save(test.URL)
-			require.NoError(t, repo.Save(test.URL))
+			request, err := http.NewRequest(http.MethodGet, "/"+test.code, nil)
+			require.NoError(t, err)
 
-			s := service.NewShortenerService(repo)
-
-			mux := http.NewServeMux()
-			mux.HandleFunc("/{id}", NewHandler(s).Redirect)
-
-			request := httptest.NewRequest(http.MethodGet, "http://localhost:8080/"+test.code, nil)
-			mux.ServeHTTP(w, request)
+			r.ServeHTTP(w, request)
 
 			res := w.Result()
 			defer res.Body.Close()

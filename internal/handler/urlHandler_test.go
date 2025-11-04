@@ -4,16 +4,30 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 )
+
+var testC *config.Config
+
+func TestMain(m *testing.M) {
+	testC = &config.Config{
+		Address: "localhost:8888",
+		BaseURL: "http://localhost:8888",
+	}
+
+	code := m.Run()
+	os.Exit(code)
+}
 
 func Test_Shorten(t *testing.T) {
 	type want struct {
@@ -82,7 +96,7 @@ func Test_Shorten(t *testing.T) {
 			w := httptest.NewRecorder()
 			repo := repository.NewMemoryRepo()
 			h := &Handler{
-				shortener: service.NewShortenerService(repo),
+				shortener: service.NewShortenerService(repo, testC.BaseURL),
 			}
 			h.Shorten(w, request)
 
@@ -106,7 +120,7 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 	repo.Save(url)
 	require.NoError(t, repo.Save(url))
 
-	s := service.NewShortenerService(repo)
+	s := service.NewShortenerService(repo, testC.BaseURL)
 	handler := http.HandlerFunc(NewHandler(s).Redirect)
 
 	r.Get("/{id}", handler)

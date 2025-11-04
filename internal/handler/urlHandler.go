@@ -47,13 +47,12 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullURL := fmt.Sprintf("http://%s/%s", r.Host, u.Code)
+	fullURL := fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(fullURL))
 
 	if err != nil {
-		http.Error(w, "Error shortening URL", http.StatusInternalServerError)
 		return
 	}
 }

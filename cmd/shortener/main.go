@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/config"
@@ -26,5 +31,24 @@ func run() error {
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 
-	return http.ListenAndServe(c.Address, r)
+	server := &http.Server{
+		Addr:    c.Address,
+		Handler: r,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	s := make(chan os.Signal, 1)
+	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
+
+	<-s
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
 }

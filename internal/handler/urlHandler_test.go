@@ -21,8 +21,8 @@ var testC *config.Config
 
 func TestMain(m *testing.M) {
 	testC = &config.Config{
-		Address: "localhost:8888",
-		BaseURL: "http://localhost:8888",
+		Address: "localhost:8080",
+		BaseURL: "http://localhost:8080",
 	}
 
 	code := m.Run()

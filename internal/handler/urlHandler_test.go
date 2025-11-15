@@ -21,8 +21,8 @@ var testC *config.Config
 
 func TestMain(m *testing.M) {
 	testC = &config.Config{
-		Address: "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Address: "localhost:8081",
+		BaseURL: "http://localhost:8081",
 	}
 
 	code := m.Run()
@@ -50,7 +50,7 @@ func Test_Shorten(t *testing.T) {
 			"text/plain",
 			want{
 				code:        http.StatusCreated,
-				response:    "http://localhost:8080/FgAJzmB",
+				response:    "http://localhost:8081/FgAJzmB",
 				contentType: "text/plain",
 			},
 		},
@@ -91,7 +91,7 @@ func Test_Shorten(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.method, "http://localhost:8080/", strings.NewReader(test.url))
+			request := httptest.NewRequest(test.method, testC.BaseURL, strings.NewReader(test.url))
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
 			repo := repository.NewMemoryRepo()

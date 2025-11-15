@@ -2,11 +2,13 @@ package config
 
 import (
 	"flag"
+	"log"
+	"os"
 )
 
 type Config struct {
-	Address string
-	BaseURL string
+	Address string `env:"SERVER_ADDRESS" envDefault:":8080"`
+	BaseURL string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 }
 
 func New() *Config {
@@ -16,6 +18,14 @@ func New() *Config {
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Базовый URL")
 
 	flag.Parse()
+
+	if envAddress := os.Getenv("SERVER_ADDRESS"); envAddress != "" {
+		config.Address = envAddress
+	}
+
+	if envBaseURL := os.Getenv("BASE_URL"); envBaseURL != "" {
+		config.BaseURL = envBaseURL
+	}
 
 	return config
 }

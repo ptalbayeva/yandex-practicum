@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	Address string `env:"SERVER_ADDRESS" envDefault:":8080"`
-	BaseURL string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	Address  string `env:"SERVER_ADDRESS" envDefault:":8080"`
+	BaseURL  string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
 }
 
 func New() *Config {
@@ -24,6 +25,10 @@ func New() *Config {
 
 	if envBaseURL := os.Getenv("BASE_URL"); envBaseURL != "" {
 		config.BaseURL = envBaseURL
+	}
+
+	if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" {
+		config.LogLevel = envLogLevel
 	}
 
 	return config

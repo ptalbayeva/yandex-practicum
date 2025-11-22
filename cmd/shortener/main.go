@@ -35,13 +35,16 @@ func run() error {
 	urlHandler := handler.NewHandler(shortenerService)
 
 	r := chi.NewRouter()
+	r.Use(middleware.RequestLogger())
+	r.Use(middleware.GzipHandler())
+
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
 
 	server := &http.Server{
 		Addr:    c.Address,
-		Handler: middleware.RequestLogger(middleware.GzipHandler(r)),
+		Handler: r,
 	}
 
 	go func() {

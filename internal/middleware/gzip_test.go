@@ -18,6 +18,7 @@ import (
 
 func TestGzipCompression(t *testing.T) {
 	router := chi.NewRouter()
+	router.Use(GzipHandler())
 	url := &model.URL{
 		Code:     "FgAJzmB",
 		Original: "https://yandex.ru",
@@ -31,7 +32,7 @@ func TestGzipCompression(t *testing.T) {
 	h := http.HandlerFunc(handler.NewHandler(s).ShortenJSON)
 	router.Post("/api/shorten", h)
 
-	srv := httptest.NewServer(GzipHandler(router))
+	srv := httptest.NewServer(router)
 	defer srv.Close()
 
 	requestBody := `{

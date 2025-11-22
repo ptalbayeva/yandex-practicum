@@ -5,8 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type compressWriter struct {
@@ -64,37 +62,39 @@ func (c compressReader) Close() error {
 	return c.zr.Close()
 }
 
-func GzipHandler(h *chi.Mux) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		contentType := req.Header.Get("Content-Type")
-		if !strings.Contains(contentType, "text/html") &&
-			!strings.Contains(contentType, "application/json") {
-			h.ServeHTTP(w, req)
-			return
-		}
-
-		ow := w
-		acceptEncoding := req.Header.Get("Accept-Encoding")
-		supportsGzip := strings.Contains(acceptEncoding, "gzip")
-		if supportsGzip {
-			cw := newCompressWriter(w)
-			ow = cw
-			defer cw.Close()
-		}
-
-		contentEncoding := req.Header.Get("Content-Encoding")
-		supportsCompress := strings.Contains(contentEncoding, "gzip")
-		if supportsCompress {
-			cr, err := newCompressReader(req.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+func GzipHandler() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			contentType := req.Header.Get("Content-Type")
+			if !strings.Contains(contentType, "text/html") &&
+				!strings.Contains(contentType, "application/json") {
+				next.ServeHTTP(w, req)
 				return
 			}
 
-			req.Body = cr
-			defer cr.Close()
-		}
+			ow := w
+			acceptEncoding := req.Header.Get("Accept-Encoding")
+			supportsGzip := strings.Contains(acceptEncoding, "gzip")
+			if supportsGzip {
+				cw := newCompressWriter(w)
+				ow = cw
+				defer cw.Close()
+			}
 
-		h.ServeHTTP(ow, req)
+			contentEncoding := req.Header.Get("Content-Encoding")
+			supportsCompress := strings.Contains(contentEncoding, "gzip")
+			if supportsCompress {
+				cr, err := newCompressReader(req.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+
+				req.Body = cr
+				defer cr.Close()
+			}
+
+			next.ServeHTTP(ow, req)
+		})
 	}
 }

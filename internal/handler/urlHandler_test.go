@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -183,7 +182,6 @@ func TestHandler_ShortenJSON(t *testing.T) {
 			req := httptest.NewRequest(tt.method, srv.URL, r)
 			req.Header.Add("Content-Type", tt.contentType)
 
-			fmt.Println(req)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)
 

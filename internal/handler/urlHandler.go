@@ -77,7 +77,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.shortener.Shorten(request.Url)
+	result, err := h.shortener.Shorten(request.URL)
 	if err != nil || result == nil {
 		http.Error(w, "failed to shorten", http.StatusUnprocessableEntity)
 		return

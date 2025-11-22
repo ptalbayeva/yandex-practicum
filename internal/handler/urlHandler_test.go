@@ -136,7 +136,7 @@ func TestHandler_ShortenJSON1(t *testing.T) {
 			name:        "Позитивный кейс",
 			method:      http.MethodPost,
 			contentType: "application/json",
-			request:     &model.Request{Url: "{\n \"url\":\"https://practicum.yandex.ru\"\n}"},
+			request:     &model.Request{URL: "{\n \"url\":\"https://practicum.yandex.ru\"\n}"},
 			want: want{
 				code:     http.StatusCreated,
 				response: &model.Response{Result: "{\n \"result\": \"http://localhost:8081/ipkjUVt\"\n}"},
@@ -146,7 +146,7 @@ func TestHandler_ShortenJSON1(t *testing.T) {
 			name:        "Некорректный метод",
 			method:      http.MethodGet,
 			contentType: "",
-			request:     &model.Request{Url: "{\n \"url\":\"https://practicum.yandex.ru\"\n}"},
+			request:     &model.Request{URL: "{\n \"url\":\"https://practicum.yandex.ru\"\n}"},
 			want: want{
 				code:     http.StatusMethodNotAllowed,
 				response: nil,
@@ -156,7 +156,7 @@ func TestHandler_ShortenJSON1(t *testing.T) {
 			name:        "Некорректный content-type",
 			method:      http.MethodPost,
 			contentType: "text/plain",
-			request:     &model.Request{Url: "https://practicum.yandex.ru"},
+			request:     &model.Request{URL: "https://practicum.yandex.ru"},
 			want: want{
 				code:     http.StatusBadRequest,
 				response: nil,
@@ -166,7 +166,7 @@ func TestHandler_ShortenJSON1(t *testing.T) {
 			name:        "Пустое тело",
 			method:      http.MethodPost,
 			contentType: "application/json",
-			request:     &model.Request{Url: "{}"},
+			request:     &model.Request{URL: "{}"},
 			want: want{
 				code:     http.StatusUnprocessableEntity,
 				response: nil,
@@ -177,7 +177,7 @@ func TestHandler_ShortenJSON1(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var r io.Reader
 			if tt.request != nil {
-				r = strings.NewReader(tt.request.Url)
+				r = strings.NewReader(tt.request.URL)
 			}
 
 			req := httptest.NewRequest(tt.method, srv.URL, r)

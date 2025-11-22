@@ -113,7 +113,7 @@ func Test_Shorten(t *testing.T) {
 		})
 	}
 }
-func TestHandler_ShortenJSON1(t *testing.T) {
+func TestHandler_ShortenJSON(t *testing.T) {
 	handler := &Handler{
 		shortener: service.NewShortenerService(repository.NewMemoryRepo(), testC.BaseURL),
 	}

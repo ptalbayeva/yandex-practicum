@@ -1,0 +1,98 @@
+package middleware
+
+import (
+	"compress/gzip"
+	"io"
+	"net/http"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+)
+
+type compressWriter struct {
+	w  http.ResponseWriter
+	zr *gzip.Writer
+}
+
+func newCompressWriter(w http.ResponseWriter) *compressWriter {
+	zr := gzip.NewWriter(w)
+
+	return &compressWriter{
+		w:  w,
+		zr: zr,
+	}
+}
+
+func (c *compressWriter) Header() http.Header {
+	return c.w.Header()
+}
+
+func (c *compressWriter) Write(b []byte) (int, error) {
+	return c.zr.Write(b)
+}
+
+func (c *compressWriter) WriteHeader(statusCode int) {
+	c.w.WriteHeader(statusCode)
+}
+
+func (c *compressWriter) Close() error {
+	return c.zr.Close()
+}
+
+type compressReader struct {
+	r  io.Reader
+	zr *gzip.Reader
+}
+
+func newCompressReader(r io.Reader) (*compressReader, error) {
+	zr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &compressReader{r: r, zr: zr}, nil
+}
+
+func (c compressReader) Read(p []byte) (n int, err error) {
+	return c.zr.Read(p)
+}
+
+func (c compressReader) Close() error {
+	return c.zr.Close()
+}
+
+func GzipHandler(h *chi.Mux) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		contentType := req.Header.Get("Content-type")
+		if !strings.Contains(contentType, "text/html") &&
+			!strings.Contains(contentType, "application/json") {
+			h.ServeHTTP(w, req)
+			return
+		}
+
+		ow := w
+		acceptEncoding := req.Header.Get("Accept-Encoding")
+		supportsEncoding := strings.Contains(acceptEncoding, "gzip")
+
+		if supportsEncoding {
+			cw := newCompressWriter(w)
+			ow = cw
+
+			defer cw.Close()
+		}
+
+		contentEncoding := req.Header.Get("Content-Encoding")
+		supportsCompress := strings.Contains(contentEncoding, "gzip")
+		if supportsCompress {
+			cr, err := newCompressReader(req.Body)
+			if err != nil {
+				return
+			}
+
+			req.Body = cr
+			defer cr.Close()
+		}
+
+		h.ServeHTTP(ow, req)
+	}
+}

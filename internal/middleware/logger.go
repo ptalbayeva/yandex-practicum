@@ -1,10 +1,9 @@
-package logger
+package middleware
 
 import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -41,7 +40,7 @@ func Initialize(level string) error {
 	return nil
 }
 
-func RequestLogger(h *chi.Mux) http.Handler {
+func RequestLogger(h http.Handler) http.HandlerFunc {
 	logFn := func(rw http.ResponseWriter, req *http.Request) {
 		start := time.Now()
 		uri := req.RequestURI
@@ -69,7 +68,7 @@ func RequestLogger(h *chi.Mux) http.Handler {
 		)
 	}
 
-	return http.HandlerFunc(logFn)
+	return logFn
 }
 
 func (r loggerResponseWriter) Write(b []byte) (int, error) {

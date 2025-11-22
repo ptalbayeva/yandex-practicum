@@ -11,18 +11,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
+	"github.com/yandex-practicum/shorten-url/internal/logger"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"go.uber.org/zap"
 )
 
 func main() {
 	if err := run(); err != nil {
-		panic(err)
+		logger.Log.Fatal("Ошибка на сервере", zap.Error(err))
 	}
 }
 
 func run() error {
 	c := config.New()
+
+	if err := logger.Initialize(c.LogLevel); err != nil {
+		return err
+	}
+
 	repo := repository.NewMemoryRepo()
 	shortenerService := service.NewShortenerService(repo, c.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService)
@@ -30,10 +37,11 @@ func run() error {
 	r := chi.NewRouter()
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
+	r.Post("/api/shorten", urlHandler.ShortenJSON)
 
 	server := &http.Server{
 		Addr:    c.Address,
-		Handler: r,
+		Handler: logger.RequestLogger(r),
 	}
 
 	go func() {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,8 +22,8 @@ var testC *config.Config
 
 func TestMain(m *testing.M) {
 	testC = &config.Config{
-		Address: "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Address: "localhost:8081",
+		BaseURL: "http://localhost:8081",
 	}
 
 	code := m.Run()
@@ -50,7 +51,7 @@ func Test_Shorten(t *testing.T) {
 			"text/plain",
 			want{
 				code:        http.StatusCreated,
-				response:    "http://localhost:8080/FgAJzmB",
+				response:    "http://localhost:8081/FgAJzmB",
 				contentType: "text/plain",
 			},
 		},
@@ -91,7 +92,7 @@ func Test_Shorten(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.method, "http://localhost:8080/", strings.NewReader(test.url))
+			request := httptest.NewRequest(test.method, testC.BaseURL, strings.NewReader(test.url))
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
 			repo := repository.NewMemoryRepo()
@@ -112,20 +113,91 @@ func Test_Shorten(t *testing.T) {
 		})
 	}
 }
+func TestHandler_ShortenJSON1(t *testing.T) {
+	handler := &Handler{
+		shortener: service.NewShortenerService(repository.NewMemoryRepo(), testC.BaseURL),
+	}
+	h := http.HandlerFunc(handler.ShortenJSON)
+	srv := httptest.NewServer(h)
 
-func getTestRouter(t *testing.T, url *model.URL) chi.Router {
-	r := chi.NewRouter()
+	type want struct {
+		code     int
+		response *model.Response
+	}
 
-	repo := repository.NewMemoryRepo()
-	repo.Save(url)
-	require.NoError(t, repo.Save(url))
+	tests := []struct {
+		name        string
+		method      string
+		contentType string
+		request     *model.Request
+		want        want
+	}{
+		{
+			name:        "Позитивный кейс",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			request:     &model.Request{URL: "{\n \"url\":\"https://practicum.yandex.ru\"\n}"},
+			want: want{
+				code:     http.StatusCreated,
+				response: &model.Response{Result: "{\n \"result\": \"http://localhost:8081/ipkjUVt\"\n}"},
+			},
+		},
+		{
+			name:        "Некорректный метод",
+			method:      http.MethodGet,
+			contentType: "",
+			request:     &model.Request{URL: "{\n \"url\":\"https://practicum.yandex.ru\"\n}"},
+			want: want{
+				code:     http.StatusMethodNotAllowed,
+				response: nil,
+			},
+		},
+		{
+			name:        "Некорректный content-type",
+			method:      http.MethodPost,
+			contentType: "text/plain",
+			request:     &model.Request{URL: "https://practicum.yandex.ru"},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: nil,
+			},
+		},
+		{
+			name:        "Пустое тело",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			request:     &model.Request{URL: "{}"},
+			want: want{
+				code:     http.StatusUnprocessableEntity,
+				response: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var r io.Reader
+			if tt.request != nil {
+				r = strings.NewReader(tt.request.URL)
+			}
 
-	s := service.NewShortenerService(repo, testC.BaseURL)
-	handler := http.HandlerFunc(NewHandler(s).Redirect)
+			req := httptest.NewRequest(tt.method, srv.URL, r)
+			req.Header.Add("Content-Type", tt.contentType)
 
-	r.Get("/{id}", handler)
+			fmt.Println(req)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, req)
 
-	return r
+			res := w.Result()
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want.code, res.StatusCode)
+			if tt.want.response != nil {
+				assert.JSONEq(t, tt.want.response.Result, string(resBody))
+			}
+		})
+	}
 }
 
 func Test_Redirect(t *testing.T) {
@@ -182,4 +254,19 @@ func Test_Redirect(t *testing.T) {
 			assert.Equal(t, test.want.location, location)
 		})
 	}
+}
+
+func getTestRouter(t *testing.T, url *model.URL) chi.Router {
+	r := chi.NewRouter()
+
+	repo := repository.NewMemoryRepo()
+	repo.Save(url)
+	require.NoError(t, repo.Save(url))
+
+	s := service.NewShortenerService(repo, testC.BaseURL)
+	handler := http.HandlerFunc(NewHandler(s).Redirect)
+
+	r.Get("/{id}", handler)
+
+	return r
 }

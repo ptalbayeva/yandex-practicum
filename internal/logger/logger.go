@@ -1,0 +1,85 @@
+package logger
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+)
+
+var Log = zap.NewNop()
+
+type (
+	responseData struct {
+		status int
+		size   int
+	}
+
+	loggerResponseWriter struct {
+		http.ResponseWriter
+		responseData *responseData
+	}
+)
+
+func Initialize(level string) error {
+	lvl, err := zap.ParseAtomicLevel(level)
+	if err != nil {
+		return err
+	}
+
+	cfg := zap.NewDevelopmentConfig()
+	cfg.Level = lvl
+
+	zl, err := cfg.Build()
+	if err != nil {
+		return err
+	}
+
+	Log = zl
+
+	return nil
+}
+
+func RequestLogger(h *chi.Mux) http.Handler {
+	logFn := func(rw http.ResponseWriter, req *http.Request) {
+		start := time.Now()
+		uri := req.RequestURI
+		method := req.Method
+		data := &responseData{
+			size:   0,
+			status: 0,
+		}
+
+		lw := loggerResponseWriter{
+			ResponseWriter: rw,
+			responseData:   data,
+		}
+
+		h.ServeHTTP(&lw, req)
+
+		duration := time.Since(start)
+
+		Log.Info("New Request:",
+			zap.String("uri", uri),
+			zap.String("method", method),
+			zap.Duration("duration", duration),
+			zap.Int("size", lw.responseData.size),
+			zap.Int("status", lw.responseData.status),
+		)
+	}
+
+	return http.HandlerFunc(logFn)
+}
+
+func (r loggerResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+
+	return size, err
+}
+
+func (r loggerResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.responseData.status = statusCode
+}

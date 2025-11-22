@@ -1,10 +1,9 @@
-package logger
+package middleware
 
 import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -41,35 +40,35 @@ func Initialize(level string) error {
 	return nil
 }
 
-func RequestLogger(h *chi.Mux) http.Handler {
-	logFn := func(rw http.ResponseWriter, req *http.Request) {
-		start := time.Now()
-		uri := req.RequestURI
-		method := req.Method
-		data := &responseData{
-			size:   0,
-			status: 0,
-		}
+func RequestLogger() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			start := time.Now()
+			uri := req.RequestURI
+			method := req.Method
+			data := &responseData{
+				size:   0,
+				status: 0,
+			}
 
-		lw := loggerResponseWriter{
-			ResponseWriter: rw,
-			responseData:   data,
-		}
+			lw := loggerResponseWriter{
+				ResponseWriter: rw,
+				responseData:   data,
+			}
 
-		h.ServeHTTP(&lw, req)
+			next.ServeHTTP(&lw, req)
 
-		duration := time.Since(start)
+			duration := time.Since(start)
 
-		Log.Info("New Request:",
-			zap.String("uri", uri),
-			zap.String("method", method),
-			zap.Duration("duration", duration),
-			zap.Int("size", lw.responseData.size),
-			zap.Int("status", lw.responseData.status),
-		)
+			Log.Info("New Request:",
+				zap.String("uri", uri),
+				zap.String("method", method),
+				zap.Duration("duration", duration),
+				zap.Int("size", lw.responseData.size),
+				zap.Int("status", lw.responseData.status),
+			)
+		})
 	}
-
-	return http.HandlerFunc(logFn)
 }
 
 func (r loggerResponseWriter) Write(b []byte) (int, error) {

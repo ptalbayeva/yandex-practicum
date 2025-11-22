@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -113,7 +112,7 @@ func Test_Shorten(t *testing.T) {
 		})
 	}
 }
-func TestHandler_ShortenJSON1(t *testing.T) {
+func TestHandler_ShortenJSON(t *testing.T) {
 	handler := &Handler{
 		shortener: service.NewShortenerService(repository.NewMemoryRepo(), testC.BaseURL),
 	}
@@ -183,7 +182,6 @@ func TestHandler_ShortenJSON1(t *testing.T) {
 			req := httptest.NewRequest(tt.method, srv.URL, r)
 			req.Header.Add("Content-Type", tt.contentType)
 
-			fmt.Println(req)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)
 

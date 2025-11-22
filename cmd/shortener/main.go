@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
-	"github.com/yandex-practicum/shorten-url/internal/logger"
+	"github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 	"go.uber.org/zap"
@@ -19,14 +19,14 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		logger.Log.Fatal("Ошибка на сервере", zap.Error(err))
+		middleware.Log.Fatal("Ошибка на сервере", zap.Error(err))
 	}
 }
 
 func run() error {
 	c := config.New()
 
-	if err := logger.Initialize(c.LogLevel); err != nil {
+	if err := middleware.Initialize(c.LogLevel); err != nil {
 		return err
 	}
 
@@ -35,13 +35,16 @@ func run() error {
 	urlHandler := handler.NewHandler(shortenerService)
 
 	r := chi.NewRouter()
+	r.Use(middleware.RequestLogger())
+	r.Use(middleware.GzipHandler())
+
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
 
 	server := &http.Server{
 		Addr:    c.Address,
-		Handler: logger.RequestLogger(r),
+		Handler: r,
 	}
 
 	go func() {

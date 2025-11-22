@@ -94,6 +94,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 
 	if fail := enc.Encode(response); fail != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
 	}
 }
 

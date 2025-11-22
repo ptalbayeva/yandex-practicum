@@ -66,7 +66,7 @@ func (c compressReader) Close() error {
 
 func GzipHandler(h *chi.Mux) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		contentType := req.Header.Get("Content-type")
+		contentType := req.Header.Get("Content-Type")
 		if !strings.Contains(contentType, "text/html") &&
 			!strings.Contains(contentType, "application/json") {
 			h.ServeHTTP(w, req)

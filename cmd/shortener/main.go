@@ -37,6 +37,7 @@ func run() error {
 	r := chi.NewRouter()
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
+	r.Post("/api/shorten", urlHandler.ShortenJSON)
 
 	server := &http.Server{
 		Addr:    c.Address,

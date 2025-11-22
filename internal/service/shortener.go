@@ -39,7 +39,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 			continue
 		}
 
-		u := model.New(code, original)
+		u := model.NewURL(code, original)
 
 		if err := s.repo.Save(u); err != nil {
 			return nil, err

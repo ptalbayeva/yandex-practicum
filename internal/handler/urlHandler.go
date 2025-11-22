@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 )
 
@@ -54,6 +56,44 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		return
+	}
+}
+
+func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "content type must be application/json", http.StatusBadRequest)
+		return
+	}
+
+	var request model.Request
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&request); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.shortener.Shorten(request.Url)
+	if err != nil || result == nil {
+		http.Error(w, "failed to shorten", http.StatusUnprocessableEntity)
+		return
+	}
+
+	response := model.Response{
+		Result: fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	enc := json.NewEncoder(w)
+
+	if fail := enc.Encode(response); fail != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
 

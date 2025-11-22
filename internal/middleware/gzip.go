@@ -87,6 +87,7 @@ func GzipHandler(h *chi.Mux) http.HandlerFunc {
 		if supportsCompress {
 			cr, err := newCompressReader(req.Body)
 			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 

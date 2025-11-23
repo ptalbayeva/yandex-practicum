@@ -97,6 +97,7 @@ func Test_Shorten(t *testing.T) {
 			repo := repository.NewMemoryRepo()
 			h := &Handler{
 				shortener: service.NewShortenerService(repo, testC.BaseURL),
+				storage:   service.NewStorageService(""),
 			}
 			h.Shorten(w, request)
 

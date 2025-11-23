@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	Address  string `env:"SERVER_ADDRESS" envDefault:":8080"`
-	BaseURL  string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
+	Address         string `env:"SERVER_ADDRESS" envDefault:":8080"`
+	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`
 }
 
 func New() *Config {
@@ -16,6 +17,7 @@ func New() *Config {
 
 	flag.StringVar(&config.Address, "a", ":8080", "Адрес запуска HTTP сервера")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Базовый URL")
+	flag.StringVar(&config.FileStoragePath, "f", "./storage", "Путь до файла хранения сокращенных URL")
 
 	flag.Parse()
 
@@ -29,6 +31,10 @@ func New() *Config {
 
 	if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" {
 		config.LogLevel = envLogLevel
+	}
+
+	if envFileStoragePath := os.Getenv("FILE_STORAGE_PATH"); envFileStoragePath != "" {
+		config.FileStoragePath = envFileStoragePath
 	}
 
 	return config

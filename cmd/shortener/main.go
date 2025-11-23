@@ -32,7 +32,8 @@ func run() error {
 
 	repo := repository.NewMemoryRepo()
 	shortenerService := service.NewShortenerService(repo, c.BaseURL)
-	urlHandler := handler.NewHandler(shortenerService)
+	storageService := service.NewStorageService(c.FileStoragePath)
+	urlHandler := handler.NewHandler(shortenerService, storageService)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())

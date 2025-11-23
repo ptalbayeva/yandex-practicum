@@ -12,7 +12,7 @@ type StorageService struct {
 }
 
 type Event struct {
-	ID          string `json:"id"`
+	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
@@ -23,7 +23,7 @@ func NewStorageService(fileStoragePath string) *StorageService {
 
 func newEvent(originalURL string, shortURL string) *Event {
 	return &Event{
-		ID:          uuid.NewString(),
+		UUID:        uuid.NewString(),
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	}

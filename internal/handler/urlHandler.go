@@ -53,6 +53,8 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	fullURL := fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
+	h.saveToStorage(originalURL, fullURL)
+
 	_, err = w.Write([]byte(fullURL))
 
 	if err != nil {

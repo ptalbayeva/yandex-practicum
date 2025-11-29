@@ -16,6 +16,9 @@ func Ping(dsn string) error {
 
 	defer db.Close()
 
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 

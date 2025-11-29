@@ -27,16 +27,16 @@ func main() {
 func run() error {
 	c := config.New()
 
+	if err := middleware.Initialize(c.LogLevel); err != nil {
+		return err
+	}
+
 	db, err := sql.Open("sqlite", c.DatabaseDSN)
 	if err != nil {
 		return err
 	}
 
 	defer db.Close()
-
-	if err := middleware.Initialize(c.LogLevel); err != nil {
-		return err
-	}
 
 	repo := repository.NewMemoryRepo()
 	storageService := service.NewStorageService(c.FileStoragePath)

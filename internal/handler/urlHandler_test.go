@@ -22,8 +22,9 @@ var testC *config.Config
 
 func TestMain(m *testing.M) {
 	testC = &config.Config{
-		Address: "localhost:8081",
-		BaseURL: "http://localhost:8081",
+		Address:     "localhost:8081",
+		BaseURL:     "http://localhost:8081",
+		DatabaseDSN: "test.db",
 	}
 
 	code := m.Run()

@@ -123,6 +123,7 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "failed to ping database", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

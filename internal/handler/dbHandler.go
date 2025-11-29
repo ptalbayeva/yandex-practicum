@@ -7,15 +7,15 @@ import (
 )
 
 type DBHandler struct {
-	db *service.DBService
+	dsn string
 }
 
-func NewDBHandler(db *service.DBService) *DBHandler {
-	return &DBHandler{db}
+func NewDBHandler(dsn string) *DBHandler {
+	return &DBHandler{dsn: dsn}
 }
 
 func (h *DBHandler) Ping(w http.ResponseWriter, r *http.Request) {
-	err := h.db.Ping()
+	err := service.Ping(h.dsn)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -10,6 +10,7 @@ type Config struct {
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`
+	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:"video.db"`
 }
 
 func New() *Config {
@@ -18,6 +19,7 @@ func New() *Config {
 	flag.StringVar(&config.Address, "a", ":8080", "Адрес запуска HTTP сервера")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Базовый URL")
 	flag.StringVar(&config.FileStoragePath, "f", "./storage", "Путь до файла хранения сокращенных URL")
+	flag.StringVar(&config.DatabaseDSN, "d", "localhost:27017", "Адрес БД")
 
 	flag.Parse()
 
@@ -35,6 +37,10 @@ func New() *Config {
 
 	if envFileStoragePath := os.Getenv("FILE_STORAGE_PATH"); envFileStoragePath != "" {
 		config.FileStoragePath = envFileStoragePath
+	}
+
+	if envDatabaseDSN := os.Getenv("DATABASE_DSN"); envDatabaseDSN != "" {
+		config.DatabaseDSN = envDatabaseDSN
 	}
 
 	return config

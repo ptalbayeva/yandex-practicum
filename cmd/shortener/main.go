@@ -34,6 +34,7 @@ func run() error {
 	storageService := service.NewStorageService(c.FileStoragePath)
 	shortenerService := service.NewShortenerService(repo, storageService, c.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService)
+	db := service.NewDBService(c.DatabaseDSN)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())
@@ -42,6 +43,7 @@ func run() error {
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
+	r.Get("/ping", handler.NewDBHandler(db).Ping)
 
 	server := &http.Server{
 		Addr:    c.Address,

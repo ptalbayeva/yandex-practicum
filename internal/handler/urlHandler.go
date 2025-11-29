@@ -14,11 +14,10 @@ import (
 
 type Handler struct {
 	shortener *service.ShortenerService
-	storage   *service.StorageService
 }
 
-func NewHandler(s *service.ShortenerService, storage *service.StorageService) *Handler {
-	return &Handler{shortener: s, storage: storage}
+func NewHandler(s *service.ShortenerService) *Handler {
+	return &Handler{shortener: s}
 }
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +52,6 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	fullURL := fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	h.saveToStorage(originalURL, fullURL)
 
 	_, err = w.Write([]byte(fullURL))
 
@@ -92,7 +90,6 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	h.saveToStorage(request.URL, response.Result)
 
 	enc := json.NewEncoder(w)
 
@@ -112,13 +109,4 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
-}
-
-func (h *Handler) saveToStorage(originalURL string, shortURL string) error {
-	err := h.storage.Save(originalURL, shortURL)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

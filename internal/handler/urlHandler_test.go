@@ -96,8 +96,7 @@ func Test_Shorten(t *testing.T) {
 			w := httptest.NewRecorder()
 			repo := repository.NewMemoryRepo()
 			h := &Handler{
-				shortener: service.NewShortenerService(repo, testC.BaseURL),
-				storage:   service.NewStorageService(""),
+				shortener: service.NewShortenerService(repo, service.NewStorageService(""), testC.BaseURL),
 			}
 			h.Shorten(w, request)
 
@@ -115,8 +114,11 @@ func Test_Shorten(t *testing.T) {
 }
 func TestHandler_ShortenJSON(t *testing.T) {
 	handler := &Handler{
-		shortener: service.NewShortenerService(repository.NewMemoryRepo(), testC.BaseURL),
-		storage:   service.NewStorageService(testC.FileStoragePath),
+		shortener: service.NewShortenerService(
+			repository.NewMemoryRepo(),
+			service.NewStorageService(testC.FileStoragePath),
+			testC.BaseURL,
+		),
 	}
 	h := http.HandlerFunc(handler.ShortenJSON)
 	srv := httptest.NewServer(h)
@@ -263,9 +265,9 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 	repo.Save(url)
 	require.NoError(t, repo.Save(url))
 
-	s := service.NewShortenerService(repo, testC.BaseURL)
 	storage := service.NewStorageService(testC.FileStoragePath)
-	handler := http.HandlerFunc(NewHandler(s, storage).Redirect)
+	s := service.NewShortenerService(repo, storage, testC.BaseURL)
+	handler := http.HandlerFunc(NewHandler(s).Redirect)
 
 	r.Get("/{id}", handler)
 

@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/model"
@@ -14,10 +17,11 @@ import (
 
 type Handler struct {
 	shortener *service.ShortenerService
+	db        *sql.DB
 }
 
-func NewHandler(s *service.ShortenerService) *Handler {
-	return &Handler{shortener: s}
+func NewHandler(s *service.ShortenerService, db *sql.DB) *Handler {
+	return &Handler{shortener: s, db: db}
 }
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
@@ -109,4 +113,17 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
+}
+
+func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	err := h.db.PingContext(ctx)
+
+	if err != nil {
+		http.Error(w, "failed to ping database", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

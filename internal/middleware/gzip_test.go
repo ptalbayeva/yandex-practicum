@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"compress/gzip"
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +30,7 @@ func TestGzipCompression(t *testing.T) {
 	require.NoError(t, repo.Save(url))
 
 	s := service.NewShortenerService(repo, service.NewStorageService(""), "http://localhost:8081")
-	h := http.HandlerFunc(handler.NewHandler(s).ShortenJSON)
+	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}).ShortenJSON)
 	router.Post("/api/shorten", h)
 
 	srv := httptest.NewServer(router)

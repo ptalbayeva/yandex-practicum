@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -26,6 +27,13 @@ func main() {
 func run() error {
 	c := config.New()
 
+	db, err := sql.Open("sqlite", c.DatabaseDSN)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
 	if err := middleware.Initialize(c.LogLevel); err != nil {
 		return err
 	}
@@ -33,7 +41,7 @@ func run() error {
 	repo := repository.NewMemoryRepo()
 	storageService := service.NewStorageService(c.FileStoragePath)
 	shortenerService := service.NewShortenerService(repo, storageService, c.BaseURL)
-	urlHandler := handler.NewHandler(shortenerService)
+	urlHandler := handler.NewHandler(shortenerService, db)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())
@@ -42,7 +50,7 @@ func run() error {
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
-	r.Get("/ping", handler.NewDBHandler(c.DatabaseDSN).Ping)
+	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{
 		Addr:    c.Address,

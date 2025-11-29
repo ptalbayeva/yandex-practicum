@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -267,7 +268,7 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 
 	storage := service.NewStorageService(testC.FileStoragePath)
 	s := service.NewShortenerService(repo, storage, testC.BaseURL)
-	handler := http.HandlerFunc(NewHandler(s).Redirect)
+	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}).Redirect)
 
 	r.Get("/{id}", handler)
 

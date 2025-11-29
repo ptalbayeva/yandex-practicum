@@ -15,11 +15,12 @@ import (
 
 type ShortenerService struct {
 	repo    repository.URLRepository
+	storage *StorageService
 	BaseURL string
 }
 
-func NewShortenerService(repo repository.URLRepository, baseURL string) *ShortenerService {
-	return &ShortenerService{repo: repo, BaseURL: baseURL}
+func NewShortenerService(repo repository.URLRepository, s *StorageService, baseURL string) *ShortenerService {
+	return &ShortenerService{repo: repo, storage: s, BaseURL: baseURL}
 }
 
 func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
@@ -32,6 +33,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 	for {
 		if u, err := s.repo.FindByCode(code); err == nil {
 			if u.Original == original {
+				s.saveToStorage(u)
 				return u, nil
 			}
 
@@ -39,7 +41,8 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 			continue
 		}
 
-		u := model.New(code, original)
+		u := model.NewURL(code, original)
+		s.saveToStorage(u)
 
 		if err := s.repo.Save(u); err != nil {
 			return nil, err
@@ -77,4 +80,13 @@ func (s *ShortenerService) isValidURL(original string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (s *ShortenerService) saveToStorage(u *model.URL) error {
+	err := s.storage.Save(u.Original, u.Code)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

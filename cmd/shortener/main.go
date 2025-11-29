@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
 	"github.com/yandex-practicum/shorten-url/internal/middleware"
@@ -31,7 +32,7 @@ func run() error {
 		return err
 	}
 
-	db, err := sql.Open("sqlite", c.DatabaseDSN)
+	db, err := sql.Open("pgx", c.DatabaseDSN)
 	if err != nil {
 		return err
 	}

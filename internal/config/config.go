@@ -10,7 +10,7 @@ type Config struct {
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`
-	DatabaseDSN     string `env:"DATABASE_DSN" envDefault:"video.db"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 func New() *Config {

@@ -16,8 +16,8 @@ type Config struct {
 func New() *Config {
 	config := &Config{}
 
-	flag.StringVar(&config.Address, "a", ":8081", "Адрес запуска HTTP сервера")
-	flag.StringVar(&config.BaseURL, "b", "http://localhost:8081", "Базовый URL")
+	flag.StringVar(&config.Address, "a", ":8080", "Адрес запуска HTTP сервера")
+	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Базовый URL")
 	flag.StringVar(&config.FileStoragePath, "f", "./storage", "Путь до файла хранения сокращенных URL")
 	flag.StringVar(&config.DatabaseDSN, "d", "postgres://username:passwod@localhost:5432/urls?sslmode=disable", "Адрес БД")
 

@@ -34,15 +34,16 @@ func run() error {
 
 	var repo repository.URLRepository
 
-	repo = repository.NewMemoryRepo()
 	db, err := sql.Open("pgx", c.DatabaseDSN)
+
 	if err != nil {
-		log.Println("Error connecting to database", zap.Error(err))
+		repo = repository.NewMemoryRepo()
+	} else {
+		repo = repository.NewDBRepository(db)
 	}
 
 	defer db.Close()
 
-	repo = repository.NewDBRepository(db)
 	storageService := service.NewStorageService(c.FileStoragePath)
 	shortenerService := service.NewShortenerService(repo, storageService, c.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService, db)

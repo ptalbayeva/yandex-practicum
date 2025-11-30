@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,8 +43,6 @@ func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 	err := url.Scan(&URL.Original, &URL.Code)
 
 	if err != nil {
-		log.Println(url)
-		log.Println(err)
 		return nil, errors.New("error while scanning url")
 	}
 

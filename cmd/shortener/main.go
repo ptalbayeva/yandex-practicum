@@ -36,7 +36,7 @@ func run() error {
 
 	db, err := sql.Open("pgx", c.DatabaseDSN)
 
-	if err != nil {
+	if err != nil || c.DatabaseDSN == " " {
 		repo = repository.NewMemoryRepo()
 	} else {
 		repo = repository.NewDBRepository(db)

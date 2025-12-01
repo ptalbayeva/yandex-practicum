@@ -29,7 +29,7 @@ func TestGzipCompression(t *testing.T) {
 	repo.Save(url)
 	require.NoError(t, repo.Save(url))
 
-	s := service.NewShortenerService(repo, service.NewStorageService(""), "http://localhost:8081")
+	s := service.NewShortenerService(repo, "http://localhost:8081")
 	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}).ShortenJSON)
 	router.Post("/api/shorten", h)
 

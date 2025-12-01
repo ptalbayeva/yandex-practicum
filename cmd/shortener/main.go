@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -33,27 +32,19 @@ func run() error {
 		return err
 	}
 
-	var repo repository.URLRepository
-
 	db, err := sql.Open("pgx", c.DatabaseDSN)
-
 	if err != nil {
 		return err
 	}
 
 	defer db.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	if err = db.PingContext(ctx); err != nil || c.DatabaseDSN == "" {
-		repo = repository.NewMemoryRepo()
+	repo, err := initRepository(*c)
+	if err != nil {
+		return err
 	}
 
-	repo = repository.NewDBRepository(db)
-
-	storageService := service.NewStorageService(c.FileStoragePath)
-	shortenerService := service.NewShortenerService(repo, storageService, c.BaseURL)
+	shortenerService := service.NewShortenerService(repo, c.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService, db)
 
 	r := chi.NewRouter()
@@ -85,4 +76,23 @@ func run() error {
 	}
 
 	return nil
+}
+
+func initRepository(cfg config.Config) (repository.URLRepository, error) {
+	if cfg.DatabaseDSN != "" {
+		db, err := sql.Open("pgx", cfg.DatabaseDSN)
+		if err != nil {
+			return nil, err
+		}
+
+		defer db.Close()
+
+		return repository.NewDBRepository(db), nil
+	}
+
+	if cfg.FileStoragePath != "" {
+		return repository.NewFileRepository(cfg.FileStoragePath), nil
+	}
+
+	return repository.NewMemoryRepo(), nil
 }

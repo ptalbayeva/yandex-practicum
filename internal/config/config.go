@@ -18,8 +18,8 @@ func New() *Config {
 
 	flag.StringVar(&config.Address, "a", ":8080", "Адрес запуска HTTP сервера")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Базовый URL")
-	flag.StringVar(&config.FileStoragePath, "f", "./storage", "Путь до файла хранения сокращенных URL")
-	flag.StringVar(&config.DatabaseDSN, "d", "postgres://username:password@localhost:5432/urls?sslmode=disable", "Адрес БД")
+	flag.StringVar(&config.FileStoragePath, "f", "", "Путь до файла хранения сокращенных URL")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "Адрес БД")
 
 	flag.Parse()
 
@@ -39,8 +39,10 @@ func New() *Config {
 		config.FileStoragePath = envFileStoragePath
 	}
 
-	if envDatabaseDSN := os.Getenv("DATABASE_DSN"); envDatabaseDSN != "" {
-		config.DatabaseDSN = envDatabaseDSN
+	if config.DatabaseDSN == "" {
+		if envDatabaseDSN := os.Getenv("DATABASE_DSN"); envDatabaseDSN != "" {
+			config.DatabaseDSN = envDatabaseDSN
+		}
 	}
 
 	return config

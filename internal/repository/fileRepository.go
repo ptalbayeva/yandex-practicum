@@ -34,7 +34,7 @@ func newEvent(originalURL string, shortURL string) *Event {
 
 func (f *FileRepository) Save(u *model.URL) error {
 	event := newEvent(u.Original, u.Code)
-	data, err := json.MarshalIndent(event, "", "  ")
+	data, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
@@ -46,10 +46,8 @@ func (f *FileRepository) Save(u *model.URL) error {
 
 	defer file.Close()
 
-	_, err = file.Write(data)
-
-	if err != nil {
-		return err
+	if _, fail := file.Write(append(data, '\n')); fail != nil {
+		return fail
 	}
 
 	return nil
@@ -71,11 +69,11 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 		data := scanner.Bytes()
 		fail := json.Unmarshal(data, &event)
 		if fail != nil {
-			continue
+			return nil, fail
 		}
 
 		if event.ShortURL == code {
-			return model.NewURL(event.OriginalURL, event.ShortURL), nil
+			return model.NewURL(event.ShortURL, event.OriginalURL), nil
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -36,13 +37,20 @@ func run() error {
 
 	db, err := sql.Open("pgx", c.DatabaseDSN)
 
-	if err != nil || c.DatabaseDSN == " " {
-		repo = repository.NewMemoryRepo()
-	} else {
-		repo = repository.NewDBRepository(db)
+	if err != nil {
+		return err
 	}
 
 	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if err = db.PingContext(ctx); err != nil || c.DatabaseDSN == "" {
+		repo = repository.NewMemoryRepo()
+	}
+
+	repo = repository.NewDBRepository(db)
 
 	storageService := service.NewStorageService(c.FileStoragePath)
 	shortenerService := service.NewShortenerService(repo, storageService, c.BaseURL)

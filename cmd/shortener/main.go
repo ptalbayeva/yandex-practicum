@@ -56,6 +56,10 @@ func run() error {
 		return err
 	}
 
+	if c.DatabaseDSN != "" {
+		defer db.Close()
+	}
+
 	shortenerService := service.NewShortenerService(repo, c.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService, db)
 
@@ -96,8 +100,6 @@ func initRepository(cfg config.Config) (repository.URLRepository, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		defer db.Close()
 
 		return repository.NewDBRepository(db), nil
 	}

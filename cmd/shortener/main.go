@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +12,9 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
@@ -41,6 +46,11 @@ func run() error {
 
 	repo, err := initRepository(*c)
 	if err != nil {
+		return err
+	}
+
+	fail := applyMigrations(db, "./migrations")
+	if fail != nil {
 		return err
 	}
 
@@ -95,4 +105,27 @@ func initRepository(cfg config.Config) (repository.URLRepository, error) {
 	}
 
 	return repository.NewMemoryRepo(), nil
+}
+
+func applyMigrations(db *sql.DB, migrationsPath string) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to create migration driver: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		fmt.Sprintf("file://%s", migrationsPath),
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
+	return nil
 }

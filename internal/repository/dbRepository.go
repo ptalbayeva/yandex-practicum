@@ -48,3 +48,7 @@ func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 
 	return &URL, nil
 }
+
+func (r *DBRepository) Close() error {
+	return r.db.Close()
+}

@@ -51,14 +51,12 @@ func run() error {
 		}
 	}
 
-	repo, err := initRepository(*c)
+	repo, callback, err := initRepository(*c)
 	if err != nil {
 		return err
 	}
 
-	if c.DatabaseDSN != "" {
-		defer db.Close()
-	}
+	defer callback()
 
 	shortenerService := service.NewShortenerService(repo, c.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService, db)
@@ -94,21 +92,23 @@ func run() error {
 	return nil
 }
 
-func initRepository(cfg config.Config) (repository.URLRepository, error) {
+func initRepository(cfg config.Config) (repository.URLRepository, func(), error) {
 	if cfg.DatabaseDSN != "" {
 		db, err := sql.Open("pgx", cfg.DatabaseDSN)
 		if err != nil {
-			return nil, err
+			return nil, func() {}, err
 		}
 
-		return repository.NewDBRepository(db), nil
+		repo := repository.NewDBRepository(db)
+
+		return repo, func() { repo.Close() }, nil
 	}
 
 	if cfg.FileStoragePath != "" {
-		return repository.NewFileRepository(cfg.FileStoragePath), nil
+		return repository.NewFileRepository(cfg.FileStoragePath), func() {}, nil
 	}
 
-	return repository.NewMemoryRepo(), nil
+	return repository.NewMemoryRepo(), func() {}, nil
 }
 
 func applyMigrations(db *sql.DB, migrationsPath string) error {

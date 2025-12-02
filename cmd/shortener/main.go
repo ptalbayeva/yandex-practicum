@@ -44,13 +44,6 @@ func run() error {
 
 	defer db.Close()
 
-	if c.DatabaseDSN != "" {
-		fail := applyMigrations(db, "./migrations")
-		if fail != nil {
-			return err
-		}
-	}
-
 	repo, callback, err := initRepository(*c)
 	if err != nil {
 		return err
@@ -76,8 +69,8 @@ func run() error {
 	}
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+		if fail := server.ListenAndServe(); fail != nil && !errors.Is(fail, http.ErrServerClosed) {
+			log.Fatalf("server listen error: %v", fail)
 		}
 	}()
 
@@ -85,8 +78,9 @@ func run() error {
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
 
 	<-s
-	if err := server.Shutdown(context.Background()); err != nil {
-		log.Fatal(err)
+
+	if fail := server.Shutdown(context.Background()); fail != nil {
+		log.Fatalf("server shutdown error: %v", fail)
 	}
 
 	return nil
@@ -95,6 +89,11 @@ func run() error {
 func initRepository(cfg config.Config) (repository.URLRepository, func(), error) {
 	if cfg.DatabaseDSN != "" {
 		db, err := sql.Open("pgx", cfg.DatabaseDSN)
+		if err != nil {
+			return nil, func() {}, err
+		}
+
+		err = applyMigrations(db, "./migrations")
 		if err != nil {
 			return nil, func() {}, err
 		}

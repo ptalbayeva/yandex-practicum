@@ -44,13 +44,15 @@ func run() error {
 
 	defer db.Close()
 
-	repo, err := initRepository(*c)
-	if err != nil {
-		return err
+	if c.DatabaseDSN != "" {
+		fail := applyMigrations(db, "./migrations")
+		if fail != nil {
+			return err
+		}
 	}
 
-	fail := applyMigrations(db, "./migrations")
-	if fail != nil {
+	repo, err := initRepository(*c)
+	if err != nil {
 		return err
 	}
 

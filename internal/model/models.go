@@ -23,7 +23,7 @@ type BatchURLRequest struct {
 
 type BatchURLResponse struct {
 	CorrelationID *string `json:"correlation_id"`
-	ShortenURL    string  `json:"shorten_url"`
+	ShortenURL    string  `json:"short_url"`
 }
 
 func NewURL(code, original string, uid *string) *URL {

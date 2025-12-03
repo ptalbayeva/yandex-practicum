@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-resty/resty/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex-practicum/shorten-url/internal/config"
@@ -272,4 +274,61 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 	r.Get("/{id}", handler)
 
 	return r
+}
+
+func TestHandler_BatchShorten(t *testing.T) {
+	type shortenBatchRequest struct {
+		CorrelationID string `json:"correlation_id"`
+		OriginalURL   string `json:"original_url"`
+	}
+
+	type shortenBatchResponse struct {
+		CorrelationID string `json:"correlation_id"`
+		ShortURL      string `json:"short_url"`
+	}
+
+	var responseData []shortenBatchResponse
+
+	requestData := []shortenBatchRequest{
+		{
+			CorrelationID: uuid.NewString(),
+			OriginalURL:   "https://practicum.yandex.ru",
+		},
+		{
+			CorrelationID: uuid.NewString(),
+			OriginalURL:   "https://yandex.ru",
+		},
+	}
+
+	handler := &Handler{
+		shortener: service.NewShortenerService(
+			repository.NewMemoryRepo(),
+			testC.BaseURL,
+		),
+	}
+	h := http.HandlerFunc(handler.BatchShorten)
+	srv := httptest.NewServer(h)
+
+	rest := resty.New().SetBaseURL(srv.URL)
+	req := rest.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(requestData).
+		SetResult(&responseData)
+
+	resp, err := req.Post("/api/shorten/batch")
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode())
+	assert.Equal(t, len(requestData), len(responseData))
+
+	var correlations int
+	for _, r := range responseData {
+		for _, request := range requestData {
+			if r.CorrelationID == request.CorrelationID {
+				correlations++
+			}
+		}
+	}
+
+	assert.Equal(t, correlations, len(requestData))
 }

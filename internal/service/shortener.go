@@ -39,7 +39,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 			continue
 		}
 
-		u := model.NewURL(code, original)
+		u := model.NewURL(code, original, nil)
 
 		if err := s.repo.Save(u); err != nil {
 			return nil, err
@@ -47,6 +47,51 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 
 		return u, nil
 	}
+}
+
+func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest) ([]*model.BatchURLResponse, error) {
+	responses := make([]*model.BatchURLResponse, 0, len(items))
+	urls := make([]*model.URL, 0, len(items))
+
+	for _, item := range items {
+		if ok, _ := s.isValidURL(item.OriginalURL); !ok {
+			return nil, errors.New("invalid URL")
+		}
+
+		code := s.HashURL(item.OriginalURL)
+
+		for {
+			if u, err := s.repo.FindByCode(code); err == nil {
+				if u.Original == item.OriginalURL {
+					urls = append(urls, u)
+					responses = append(responses, &model.BatchURLResponse{
+						CorrelationID: item.CorrelationID,
+						ShortenURL:    s.BaseURL + "/" + u.Code,
+					})
+
+					break
+				}
+
+				item.OriginalURL = item.OriginalURL + strconv.Itoa(rand.Int())
+				continue
+			}
+
+			u := model.NewURL(code, item.OriginalURL, item.CorrelationID)
+			urls = append(urls, u)
+			responses = append(responses, &model.BatchURLResponse{
+				CorrelationID: item.CorrelationID,
+				ShortenURL:    s.BaseURL + "/" + u.Code,
+			})
+
+			break
+		}
+	}
+
+	if err := s.repo.SaveMany(urls); err != nil {
+		return nil, err
+	}
+
+	return responses, nil
 }
 
 func (s *ShortenerService) Resolve(code string) (*model.URL, error) {

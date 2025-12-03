@@ -65,15 +65,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "content type must be application/json", http.StatusBadRequest)
-		return
-	}
+	h.validateJSONMethod(w, r)
 
 	var request model.Request
 	dec := json.NewDecoder(r.Body)
@@ -103,6 +95,30 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
+	h.validateJSONMethod(w, r)
+
+	var reqs []model.BatchURLRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	results, err := h.shortener.ShortenBatch(reqs)
+	if err != nil {
+		http.Error(w, "failed to shorten", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	if fail := json.NewEncoder(w).Encode(results); fail != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "id")
 
@@ -127,4 +143,16 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "content type must be application/json", http.StatusBadRequest)
+		return
+	}
 }

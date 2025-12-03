@@ -39,3 +39,14 @@ func (r *MemoryRepo) FindByCode(code string) (*model.URL, error) {
 
 	return u, nil
 }
+
+func (r *MemoryRepo) SaveMany(urls []*model.URL) error {
+	r.mu.RLock()
+	for _, u := range urls {
+		r.data[u.Code] = u
+	}
+
+	defer r.mu.RUnlock()
+
+	return nil
+}

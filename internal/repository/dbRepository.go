@@ -19,7 +19,7 @@ func NewDBRepository(db *sql.DB) *DBRepository {
 }
 
 func (r *DBRepository) Save(u *model.URL) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
 	_, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten)"+
@@ -32,7 +32,7 @@ func (r *DBRepository) Save(u *model.URL) error {
 }
 
 func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
 	url := r.db.QueryRowContext(ctx,
@@ -51,4 +51,31 @@ func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 
 func (r *DBRepository) Close() error {
 	return r.db.Close()
+}
+
+func (r *DBRepository) SaveMany(urls []*model.URL) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten) VALUES ($1, $2, $3)")
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	for _, u := range urls {
+		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code)
+		if fail != nil {
+			return fail
+		}
+	}
+
+	return tx.Commit()
 }

@@ -61,6 +61,7 @@ func run() error {
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
+	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
 	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{

@@ -39,7 +39,7 @@ func (f *FileRepository) Save(u *model.URL) error {
 		return err
 	}
 
-	file, err := os.OpenFile(f.fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(f.fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 		}
 
 		if event.ShortURL == code {
-			return model.NewURL(event.ShortURL, event.OriginalURL), nil
+			return model.NewURL(event.ShortURL, event.OriginalURL, nil), nil
 		}
 	}
 
@@ -82,4 +82,28 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 	}
 
 	return nil, errors.New("not found")
+}
+
+func (f *FileRepository) SaveMany(urls []*model.URL) error {
+	file, err := os.OpenFile(f.fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	for _, u := range urls {
+		event := newEvent(u.Original, u.Code)
+		data, fail := json.Marshal(event)
+		if fail != nil {
+			return fail
+		}
+
+		if _, failed := file.Write(append(data, '\n')); failed != nil {
+			return failed
+		}
+
+	}
+
+	return nil
 }

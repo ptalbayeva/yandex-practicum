@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 )
 
@@ -25,10 +27,13 @@ func (r *DBRepository) Save(u *model.URL) error {
 	_, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten)"+
 		"VALUES ($1, $2, $3)", uuid.NewString(), u.Original, u.Code)
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			err = ErrConflict
+		}
 	}
 
-	return nil
+	return err
 }
 
 func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
@@ -73,8 +78,13 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	for _, u := range urls {
 		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code)
 		if fail != nil {
-			return fail
+			var pgErr *pgconn.PgError
+			if errors.As(fail, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+				fail = ErrConflict
+			}
 		}
+
+		return fail
 	}
 
 	return tx.Commit()

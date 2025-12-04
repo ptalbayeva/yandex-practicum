@@ -1,6 +1,12 @@
 package repository
 
-import "github.com/yandex-practicum/shorten-url/internal/model"
+import (
+	"errors"
+
+	"github.com/yandex-practicum/shorten-url/internal/model"
+)
+
+var ErrConflict = errors.New("conflict")
 
 type URLRepository interface {
 	Save(u *model.URL) error

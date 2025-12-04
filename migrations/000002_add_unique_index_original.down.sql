@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS unqx_shorten_urls_original;

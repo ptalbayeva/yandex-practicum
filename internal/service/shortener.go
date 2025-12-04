@@ -41,7 +41,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 
 		u := model.NewURL(code, original, nil)
 
-		if err := s.repo.Save(u); err != nil {
+		if err := s.repo.Save(u); err != nil && !errors.Is(err, repository.ErrConflict) {
 			return nil, err
 		}
 
@@ -87,7 +87,7 @@ func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest) ([]*model
 		}
 	}
 
-	if err := s.repo.SaveMany(urls); err != nil {
+	if err := s.repo.SaveMany(urls); err != nil && !errors.Is(err, repository.ErrConflict) {
 		return nil, err
 	}
 

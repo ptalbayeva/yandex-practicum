@@ -19,7 +19,7 @@ import (
 
 func TestGzipCompression(t *testing.T) {
 	router := chi.NewRouter()
-	router.Use(GzipHandler())
+	router.Use(GzipMiddleware)
 	url := &model.URL{
 		Code:     "FgAJzmB",
 		Original: "https://yandex.ru",
@@ -37,11 +37,11 @@ func TestGzipCompression(t *testing.T) {
 	defer srv.Close()
 
 	requestBody := `{
-        "url": "https://yandex.ru"
+        "url": "https://yex.ru"
     }`
 
 	successBody := `{
-        "result": "http://localhost:8081/FgAJzmB"
+        "result":"http://localhost:8081/Gf4xjZe"
     }`
 
 	t.Run("sends_gzip", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestGzipCompression(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(r)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		require.Equal(t, http.StatusConflict, resp.StatusCode)
 
 		defer resp.Body.Close()
 

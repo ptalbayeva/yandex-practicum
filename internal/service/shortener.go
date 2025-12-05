@@ -32,7 +32,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 	for {
 		if u, err := s.repo.FindByCode(code); err == nil {
 			if u.Original == original {
-				return u, nil
+				return u, repository.ErrConflict
 			}
 
 			original = original + strconv.Itoa(rand.Int())
@@ -41,7 +41,11 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 
 		u := model.NewURL(code, original, nil)
 
-		if err := s.repo.Save(u); err != nil && !errors.Is(err, repository.ErrConflict) {
+		if err := s.repo.Save(u); err != nil {
+			if errors.Is(err, repository.ErrConflict) {
+				return u, err
+			}
+
 			return nil, err
 		}
 
@@ -87,7 +91,7 @@ func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest) ([]*model
 		}
 	}
 
-	if err := s.repo.SaveMany(urls); err != nil && !errors.Is(err, repository.ErrConflict) {
+	if err := s.repo.SaveMany(urls); err != nil {
 		return nil, err
 	}
 

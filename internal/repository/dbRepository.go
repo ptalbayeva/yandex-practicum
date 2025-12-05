@@ -68,7 +68,8 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 		return err
 	}
 
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten) VALUES ($1, $2, $3)")
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten) VALUES ($1, $2, $3)"+
+		"ON CONFLICT (original) DO NOTHING")
 	if err != nil {
 		return err
 	}
@@ -78,13 +79,9 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	for _, u := range urls {
 		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code)
 		if fail != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(fail, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-				fail = ErrConflict
-			}
+			return fail
 		}
 
-		return fail
 	}
 
 	return tx.Commit()

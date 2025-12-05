@@ -56,7 +56,7 @@ func run() error {
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())
-	r.Use(middleware.GzipHandler())
+	r.Use(middleware.GzipMiddleware)
 
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)

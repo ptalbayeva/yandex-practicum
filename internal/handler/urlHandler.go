@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/yandex-practicum/shorten-url/internal/model"
+	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 )
 
@@ -47,14 +49,25 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var fullURL string
+
 	u, err := h.shortener.Shorten(originalURL)
+
+	w.Header().Set("Content-Type", "text/plain")
 	if err != nil {
+		if errors.Is(err, repository.ErrConflict) {
+			w.WriteHeader(http.StatusConflict)
+			fullURL = fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
+
+			w.Write([]byte(fullURL))
+			return
+		}
+
 		http.Error(w, "failed to shorten", http.StatusInternalServerError)
 		return
 	}
 
-	fullURL := fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
-	w.Header().Set("Content-Type", "text/plain")
+	fullURL = fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
 	w.WriteHeader(http.StatusCreated)
 
 	_, err = w.Write([]byte(fullURL))
@@ -74,17 +87,26 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := model.Response{}
+	w.Header().Set("Content-Type", "application/json")
+
 	result, err := h.shortener.Shorten(request.URL)
-	if err != nil || result == nil {
+	if err != nil {
+		if errors.Is(err, repository.ErrConflict) {
+			response.Result = fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code)
+
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(response)
+
+			return
+		}
+
 		http.Error(w, "failed to shorten", http.StatusUnprocessableEntity)
 		return
 	}
 
-	response := model.Response{
-		Result: fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code),
-	}
+	response.Result = fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	enc := json.NewEncoder(w)

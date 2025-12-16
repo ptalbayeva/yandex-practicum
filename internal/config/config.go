@@ -31,8 +31,8 @@ func New(path string) (*Config, error) {
 
 	flag.StringVar(&config.Server.Address, "a", ":8080", "Адрес запуска HTTP сервера")
 	flag.StringVar(&config.Server.BaseURL, "b", "http://localhost:8080", "Базовый URL")
-	flag.StringVar(&config.FileStoragePath, "f", "./storage", "Путь до файла хранения сокращенных URL")
-	flag.StringVar(&config.Database.DSN, "d", "postgres://username:password@localhost:5432/urls?sslmode=disable", "Адрес БД")
+	flag.StringVar(&config.FileStoragePath, "f", "", "Путь до файла хранения сокращенных URL")
+	flag.StringVar(&config.Database.DSN, "d", "", "Адрес БД")
 
 	flag.Parse()
 

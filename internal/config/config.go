@@ -25,8 +25,8 @@ func New(path string) (*Config, error) {
 		return nil, err
 	}
 
-	flag.StringVar(&config.Server.Address, "a", ":8082", "Адрес запуска HTTP сервера")
-	flag.StringVar(&config.Server.BaseURL, "b", "http://localhost:8082", "Базовый URL")
+	flag.StringVar(&config.Server.Address, "a", ":8080", "Адрес запуска HTTP сервера")
+	flag.StringVar(&config.Server.BaseURL, "b", "http://localhost:8080", "Базовый URL")
 	flag.StringVar(&config.FileStoragePath, "f", "./storage", "Путь до файла хранения сокращенных URL")
 	flag.StringVar(&config.Database.DSN, "d", "", "Адрес БД")
 

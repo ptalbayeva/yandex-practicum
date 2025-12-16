@@ -19,8 +19,8 @@ func NewMemoryRepo() *MemoryRepo {
 }
 
 func (r *MemoryRepo) Save(u *model.URL) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	r.data[u.Code] = u
 
@@ -38,4 +38,15 @@ func (r *MemoryRepo) FindByCode(code string) (*model.URL, error) {
 	}
 
 	return u, nil
+}
+
+func (r *MemoryRepo) SaveMany(urls []*model.URL) error {
+	r.mu.Lock()
+	for _, u := range urls {
+		r.data[u.Code] = u
+	}
+
+	defer r.mu.Unlock()
+
+	return nil
 }

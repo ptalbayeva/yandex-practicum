@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX unqx_shorten_urls_original ON shorten_urls(original);

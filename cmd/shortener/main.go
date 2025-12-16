@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +12,10 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
 	"github.com/yandex-practicum/shorten-url/internal/middleware"
@@ -30,18 +37,32 @@ func run() error {
 		return err
 	}
 
-	repo := repository.NewMemoryRepo()
-	storageService := service.NewStorageService(c.FileStoragePath)
-	shortenerService := service.NewShortenerService(repo, storageService, c.BaseURL)
-	urlHandler := handler.NewHandler(shortenerService)
+	db, err := sql.Open("pgx", c.DatabaseDSN)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	repo, callback, err := initRepository(*c)
+	if err != nil {
+		return err
+	}
+
+	defer callback()
+
+	shortenerService := service.NewShortenerService(repo, c.BaseURL)
+	urlHandler := handler.NewHandler(shortenerService, db)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())
-	r.Use(middleware.GzipHandler())
+	r.Use(middleware.GzipMiddleware)
 
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
+	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
+	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{
 		Addr:    c.Address,
@@ -49,8 +70,8 @@ func run() error {
 	}
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+		if fail := server.ListenAndServe(); fail != nil && !errors.Is(fail, http.ErrServerClosed) {
+			log.Fatalf("server listen error: %v", fail)
 		}
 	}()
 
@@ -58,8 +79,56 @@ func run() error {
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
 
 	<-s
-	if err := server.Shutdown(context.Background()); err != nil {
-		log.Fatal(err)
+
+	if fail := server.Shutdown(context.Background()); fail != nil {
+		log.Fatalf("server shutdown error: %v", fail)
+	}
+
+	return nil
+}
+
+func initRepository(cfg config.Config) (repository.URLRepository, func(), error) {
+	if cfg.DatabaseDSN != "" {
+		db, err := sql.Open("pgx", cfg.DatabaseDSN)
+		if err != nil {
+			return nil, func() {}, err
+		}
+
+		err = applyMigrations(db, "./migrations")
+		if err != nil {
+			return nil, func() {}, err
+		}
+
+		repo := repository.NewDBRepository(db)
+
+		return repo, func() { repo.Close() }, nil
+	}
+
+	if cfg.FileStoragePath != "" {
+		return repository.NewFileRepository(cfg.FileStoragePath), func() {}, nil
+	}
+
+	return repository.NewMemoryRepo(), func() {}, nil
+}
+
+func applyMigrations(db *sql.DB, migrationsPath string) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to create migration driver: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		fmt.Sprintf("file://%s", migrationsPath),
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
 	return nil

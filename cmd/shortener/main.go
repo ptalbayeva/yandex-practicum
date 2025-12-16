@@ -31,13 +31,18 @@ func main() {
 }
 
 func run() error {
-	c := config.New()
+	c, err := config.New("internal/config/config.yaml")
+	log.Println(c)
+
+	if err != nil {
+		return err
+	}
 
 	if err := middleware.Initialize(c.LogLevel); err != nil {
 		return err
 	}
 
-	db, err := sql.Open("pgx", c.DatabaseDSN)
+	db, err := sql.Open("pgx", c.Database.DSN)
 	if err != nil {
 		return err
 	}
@@ -51,7 +56,7 @@ func run() error {
 
 	defer callback()
 
-	shortenerService := service.NewShortenerService(repo, c.BaseURL)
+	shortenerService := service.NewShortenerService(repo, c.Server.BaseURL)
 	urlHandler := handler.NewHandler(shortenerService, db)
 
 	r := chi.NewRouter()
@@ -65,7 +70,7 @@ func run() error {
 	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{
-		Addr:    c.Address,
+		Addr:    c.Server.Address,
 		Handler: r,
 	}
 
@@ -88,8 +93,8 @@ func run() error {
 }
 
 func initRepository(cfg config.Config) (repository.URLRepository, func(), error) {
-	if cfg.DatabaseDSN != "" {
-		db, err := sql.Open("pgx", cfg.DatabaseDSN)
+	if cfg.Database.DSN != "" {
+		db, err := sql.Open("pgx", cfg.Database.DSN)
 		if err != nil {
 			return nil, func() {}, err
 		}

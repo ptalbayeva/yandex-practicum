@@ -96,7 +96,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 			response.Result = fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code)
 
 			w.WriteHeader(http.StatusConflict)
-			_ = json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(response)
 
 			return
 		}

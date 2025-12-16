@@ -48,7 +48,7 @@ func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 	err := url.Scan(&URL.Original, &URL.Code)
 
 	if err != nil {
-		return nil, errors.New("error while scanning url")
+		return nil, err
 	}
 
 	return &URL, nil

@@ -1,9 +1,0 @@
-server:
-  address: ":8080"
-  baseUrl: "http://localhost:8080"
-
-database:
-  dsn: ""
-
-logLevel: "info"
-fileStoragePath: "./storage""

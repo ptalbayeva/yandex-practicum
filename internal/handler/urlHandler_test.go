@@ -20,12 +20,14 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/service"
 )
 
-var testC config.Config
+var testC *config.Config
 
 func TestMain(m *testing.M) {
-	testC.Server.Address = "localhost:8081"
-	testC.Server.BaseURL = "http://localhost:8081"
-	testC.Database.DSN = "test.db"
+	testC = &config.Config{
+		Address:     "localhost:8081",
+		BaseURL:     "http://localhost:8081",
+		DatabaseDSN: "test.db",
+	}
 
 	code := m.Run()
 	os.Exit(code)
@@ -93,12 +95,12 @@ func Test_Shorten(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.method, testC.Server.BaseURL, strings.NewReader(test.url))
+			request := httptest.NewRequest(test.method, testC.BaseURL, strings.NewReader(test.url))
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
 			repo := repository.NewMemoryRepo()
 			h := &Handler{
-				shortener: service.NewShortenerService(repo, testC.Server.BaseURL),
+				shortener: service.NewShortenerService(repo, testC.BaseURL),
 			}
 			h.Shorten(w, request)
 
@@ -118,7 +120,7 @@ func TestHandler_ShortenJSON(t *testing.T) {
 	handler := &Handler{
 		shortener: service.NewShortenerService(
 			repository.NewMemoryRepo(),
-			testC.Server.BaseURL,
+			testC.BaseURL,
 		),
 	}
 	h := http.HandlerFunc(handler.ShortenJSON)
@@ -266,7 +268,7 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 	repo.Save(url)
 	require.NoError(t, repo.Save(url))
 
-	s := service.NewShortenerService(repo, testC.Server.BaseURL)
+	s := service.NewShortenerService(repo, testC.BaseURL)
 	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}).Redirect)
 
 	r.Get("/{id}", handler)
@@ -301,7 +303,7 @@ func TestHandler_BatchShorten(t *testing.T) {
 	handler := &Handler{
 		shortener: service.NewShortenerService(
 			repository.NewMemoryRepo(),
-			testC.Server.BaseURL,
+			testC.BaseURL,
 		),
 	}
 	h := http.HandlerFunc(handler.BatchShorten)

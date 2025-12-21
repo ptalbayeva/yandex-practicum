@@ -50,3 +50,11 @@ func (r *MemoryRepo) SaveMany(urls []*model.URL) error {
 
 	return nil
 }
+
+func (r *MemoryRepo) FindManyByUserId(userID string) ([]*model.URL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var urls []*model.URL
+
+	return urls, nil
+}

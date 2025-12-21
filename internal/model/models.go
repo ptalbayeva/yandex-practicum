@@ -6,6 +6,7 @@ type URL struct {
 	UID      string
 	Code     string
 	Original string
+	UserID   string
 }
 
 type Request struct {
@@ -26,11 +27,17 @@ type BatchURLResponse struct {
 	ShortenURL    string  `json:"short_url"`
 }
 
-func NewURL(code, original string, uid *string) *URL {
+type URLResponse struct {
+	ShortenURL  string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
+func NewURL(code, original string, uid *string, userID string) *URL {
 	url := &URL{
 		Code:     code,
 		Original: original,
 		UID:      uuid.NewString(),
+		UserID:   userID,
 	}
 
 	if uid != nil {

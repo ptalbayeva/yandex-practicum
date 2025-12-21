@@ -57,9 +57,11 @@ func run() error {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.GzipMiddleware)
+	r.Use(middleware.Auth)
 
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
+	r.Get("/api/user/urls", urlHandler.GetURLS)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
 	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
 	r.Get("/ping", urlHandler.Ping)

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -51,7 +52,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	var fullURL string
 
-	u, err := h.shortener.Shorten(originalURL)
+	u, err := h.shortener.Shorten(originalURL, getUserID(r))
 
 	w.Header().Set("Content-Type", "text/plain")
 	if err != nil {
@@ -90,7 +91,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	response := model.Response{}
 	w.Header().Set("Content-Type", "application/json")
 
-	result, err := h.shortener.Shorten(request.URL)
+	result, err := h.shortener.Shorten(request.URL, getUserID(r))
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
 			response.Result = fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code)
@@ -126,7 +127,7 @@ func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.shortener.ShortenBatch(reqs)
+	results, err := h.shortener.ShortenBatch(reqs, getUserID(r))
 	if err != nil {
 		http.Error(w, "failed to shorten", http.StatusInternalServerError)
 		return
@@ -153,6 +154,46 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
 }
 
+func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	authCookie, err := r.Cookie("authorization")
+
+	if err != nil {
+		http.Error(w, "invalid cookie", http.StatusUnauthorized)
+		return
+	}
+
+	if authCookie.Value == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	results, err := h.shortener.GetManyByUserId(getUserID(r))
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "invalid cookie", http.StatusInternalServerError)
+		return
+	}
+
+	if len(results) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if fail := json.NewEncoder(w).Encode(results); fail != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -177,4 +218,8 @@ func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "content type must be application/json", http.StatusBadRequest)
 		return
 	}
+}
+
+func getUserID(r *http.Request) string {
+	return r.Context().Value("user_id").(string)
 }

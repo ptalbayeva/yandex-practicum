@@ -24,8 +24,8 @@ func (r *DBRepository) Save(u *model.URL) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	_, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten)"+
-		"VALUES ($1, $2, $3)", uuid.NewString(), u.Original, u.Code)
+	_, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten, user_id)"+
+		"VALUES ($1, $2, $3, $4)", uuid.NewString(), u.Original, u.Code, u.UserID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -68,7 +68,7 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 		return err
 	}
 
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten) VALUES ($1, $2, $3)"+
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten, user_id) VALUES ($1, $2, $3, $4)"+
 		"ON CONFLICT (original) DO NOTHING")
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	defer stmt.Close()
 
 	for _, u := range urls {
-		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code)
+		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code, u.UserID)
 		if fail != nil {
 			return fail
 		}
@@ -85,4 +85,37 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	}
 
 	return tx.Commit()
+}
+
+func (r *DBRepository) FindManyByUserId(userID string) ([]*model.URL, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	rows, err := r.db.QueryContext(ctx,
+		"SELECT uuid, original, shorten, user_id FROM shorten_urls WHERE user_id = $1", userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	var urls []*model.URL
+
+	for rows.Next() {
+		var u model.URL
+
+		err = rows.Scan(&u.UID, &u.Original, &u.Code, &u.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		urls = append(urls, &u)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return urls, nil
 }

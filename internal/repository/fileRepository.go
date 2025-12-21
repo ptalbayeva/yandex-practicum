@@ -18,6 +18,7 @@ type Event struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id,omitempty"`
 }
 
 func NewFileRepository(fileStoragePath string) *FileRepository {
@@ -73,7 +74,7 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 		}
 
 		if event.ShortURL == code {
-			return model.NewURL(event.ShortURL, event.OriginalURL, nil), nil
+			return model.NewURL(event.ShortURL, event.OriginalURL, nil, event.UserID), nil
 		}
 	}
 
@@ -106,4 +107,42 @@ func (f *FileRepository) SaveMany(urls []*model.URL) error {
 	}
 
 	return nil
+}
+
+func (f *FileRepository) FindManyByUserId(userID string) ([]*model.URL, error) {
+	file, err := os.Open(f.fileStoragePath)
+
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	var urls []*model.URL
+
+	for scanner.Scan() {
+		var event Event
+
+		data := scanner.Bytes()
+		err = json.Unmarshal(data, &event)
+		if err != nil {
+			continue
+		}
+
+		if event.UserID == userID {
+			url := model.NewURL(event.ShortURL, event.OriginalURL, nil, userID)
+			urls = append(urls, url)
+
+			continue
+		}
+
+		if err = scanner.Err(); err != nil {
+			return nil, err
+		}
+
+		return urls, nil
+	}
+
+	return urls, nil
 }

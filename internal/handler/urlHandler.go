@@ -163,12 +163,7 @@ func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 
 	authCookie, err := r.Cookie("authorization")
 
-	if err != nil {
-		http.Error(w, "invalid cookie", http.StatusUnauthorized)
-		return
-	}
-
-	if authCookie.Value == "" {
+	if err != nil || authCookie.Value == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

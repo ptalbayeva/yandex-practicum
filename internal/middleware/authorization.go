@@ -24,6 +24,11 @@ const (
 
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		c, err := r.Cookie(CookieName)
 
 		var userID string

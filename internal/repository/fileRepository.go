@@ -109,7 +109,7 @@ func (f *FileRepository) SaveMany(urls []*model.URL) error {
 	return nil
 }
 
-func (f *FileRepository) FindManyByUserId(userID string) ([]*model.URL, error) {
+func (f *FileRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	file, err := os.Open(f.fileStoragePath)
 
 	if err != nil {

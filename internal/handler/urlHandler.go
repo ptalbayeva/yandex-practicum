@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
@@ -172,7 +173,7 @@ func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.shortener.GetManyByUserId(getUserID(r))
+	results, err := h.shortener.GetManyByUserID(getUserID(r))
 
 	if err != nil {
 		log.Println(err)
@@ -221,5 +222,10 @@ func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserID(r *http.Request) string {
-	return r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(config.UserIDCtx{}).(string)
+	if !ok {
+		return ""
+	}
+
+	return userID
 }

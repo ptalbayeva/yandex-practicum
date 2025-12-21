@@ -108,8 +108,8 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	return u, nil
 }
 
-func (s *ShortenerService) GetManyByUserId(userID string) ([]*model.URLResponse, error) {
-	urls, err := s.repo.FindManyByUserId(userID)
+func (s *ShortenerService) GetManyByUserID(userID string) ([]*model.URLResponse, error) {
+	urls, err := s.repo.FindManyByUserID(userID)
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/yandex-practicum/shorten-url/internal/config"
 )
 
 type Claims struct {
@@ -44,7 +45,7 @@ func Auth(next http.Handler) http.Handler {
 			})
 		}
 
-		ctx := context.WithValue(r.Context(), "user_id", userID)
+		ctx := context.WithValue(r.Context(), config.UserIDCtx{}, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

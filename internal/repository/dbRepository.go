@@ -87,7 +87,7 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	return tx.Commit()
 }
 
-func (r *DBRepository) FindManyByUserId(userID string) ([]*model.URL, error) {
+func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 

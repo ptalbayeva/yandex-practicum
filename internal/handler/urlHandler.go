@@ -7,13 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yandex-practicum/shorten-url/internal/config"
+	"github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
@@ -156,22 +155,14 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	authCookie, err := r.Cookie("authorization")
-
-	if err != nil || authCookie.Value == "" {
+	userID := getUserID(r)
+	if userID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	results, err := h.shortener.GetManyByUserID(getUserID(r))
+	results, err := h.shortener.GetManyByUserID(userID)
 
 	if err != nil {
-		log.Println(err)
 		http.Error(w, "invalid cookie", http.StatusInternalServerError)
 		return
 	}
@@ -217,7 +208,7 @@ func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserID(r *http.Request) string {
-	userID, ok := r.Context().Value(config.UserIDCtx{}).(string)
+	userID, ok := g.UserIDFromContext(r.Context())
 	if !ok {
 		return ""
 	}

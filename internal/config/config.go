@@ -5,14 +5,13 @@ import (
 	"os"
 )
 
-type UserIDCtx struct{}
-
 type Config struct {
 	Address         string `env:"SERVER_ADDRESS" envDefault:":8080"`
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	AuthKey         string `env:"AUTH_KEY" envDefault:"secret_key"`
 }
 
 func New() *Config {

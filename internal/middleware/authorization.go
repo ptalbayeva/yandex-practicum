@@ -1,96 +1,101 @@
-package middleware
+package g
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	"github.com/yandex-practicum/shorten-url/internal/config"
+)
+
+type contextKey string
+
+const userIDContextKey contextKey = "userID"
+
+const (
+	cookieName = "authorization"
+	tokenTTL   = 3 * time.Hour
 )
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID string
+	UserID string `json:"user_id"`
 }
 
-const (
-	CookieName = "authorization"
-	SecretKey  = "secretkey"
-	TokenExp   = time.Hour * 12
-)
+func UserIDFromContext(ctx context.Context) (string, bool) {
+	userID, ok := ctx.Value(userIDContextKey).(string)
 
-func Auth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			next.ServeHTTP(w, r)
-			return
-		}
+	return userID, ok
+}
 
-		c, err := r.Cookie(CookieName)
-
-		var userID string
-
-		if err == nil {
-			userID = GetUserID(c.Value)
-		}
-
-		if userID == "" {
-			tokenString, fail := BuildJWTString()
-			if fail != nil {
-				log.Println("Failed to build JWT token")
-				next.ServeHTTP(w, r)
+func Auth(key []byte) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if cookie, err := r.Cookie(cookieName); err == nil {
+				if claims, err := parseToken(cookie.Value, key); err == nil && claims.UserID != "" {
+					ctx := context.WithValue(r.Context(), userIDContextKey, claims.UserID)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 			}
 
-			http.SetCookie(w, &http.Cookie{
-				Name:  CookieName,
-				Value: tokenString,
-			})
+			userID := uuid.NewString()
+
+			token, err := createToken(userID, key)
+			if err != nil {
+				http.Error(w, "could not create token", http.StatusInternalServerError)
+				return
+			}
+
+			setAuthCookie(w, token)
+
+			ctx := context.WithValue(r.Context(), userIDContextKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func createToken(userID string, key []byte) (string, error) {
+	now := time.Now()
+
+	claims := &Claims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(tokenTTL)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(key)
+}
+
+func parseToken(tokenStr string, key []byte) (*Claims, error) {
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("failed to validate token")
 		}
 
-		ctx := context.WithValue(r.Context(), config.UserIDCtx{}, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func BuildJWTString() (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExp)),
-		},
-		UserID: newUserID(),
+		return key, nil
 	})
 
-	tokenString, err := token.SignedString([]byte(SecretKey))
-	if err != nil {
-		return "", err
+	if err != nil || !token.Valid {
+		return nil, err
 	}
 
-	return tokenString, nil
+	return claims, nil
 }
 
-func newUserID() string {
-	return uuid.NewString()
-}
-
-func GetUserID(tokenString string) string {
-	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims,
-		func(t *jwt.Token) (interface{}, error) {
-			return []byte(SecretKey), nil
-		})
-	if err != nil {
-		return ""
-	}
-
-	if !token.Valid {
-		log.Println("Token is not valid")
-		return ""
-	}
-
-	log.Println("Token is valid")
-
-	return claims.UserID
+func setAuthCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    token,
+		Expires:  time.Now().Add(tokenTTL),
+		MaxAge:   int(tokenTTL.Seconds()),
+		HttpOnly: true,
+	})
 }

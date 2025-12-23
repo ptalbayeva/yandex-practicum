@@ -14,12 +14,13 @@ import (
 )
 
 type ShortenerService struct {
-	repo    repository.URLRepository
-	BaseURL string
+	repo             repository.URLRepository
+	BaseURL          string
+	DeleteURLService DeleteURLService
 }
 
-func NewShortenerService(repo repository.URLRepository, baseURL string) *ShortenerService {
-	return &ShortenerService{repo: repo, BaseURL: baseURL}
+func NewShortenerService(repo repository.URLRepository, baseURL string, deleteURL DeleteURLService) *ShortenerService {
+	return &ShortenerService{repo: repo, BaseURL: baseURL, DeleteURLService: deleteURL}
 }
 
 func (s *ShortenerService) Shorten(original string, userID string) (*model.URL, error) {
@@ -39,7 +40,7 @@ func (s *ShortenerService) Shorten(original string, userID string) (*model.URL, 
 			continue
 		}
 
-		u := model.NewURL(code, original, nil, userID)
+		u := model.NewURL(code, original, nil, userID, false)
 
 		if err := s.repo.Save(u); err != nil {
 			if errors.Is(err, repository.ErrConflict) {
@@ -80,7 +81,7 @@ func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest, userID st
 				continue
 			}
 
-			u := model.NewURL(code, item.OriginalURL, item.CorrelationID, userID)
+			u := model.NewURL(code, item.OriginalURL, item.CorrelationID, userID, false)
 			urls = append(urls, u)
 			responses = append(responses, &model.BatchURLResponse{
 				CorrelationID: item.CorrelationID,
@@ -105,6 +106,10 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 		return nil, errors.New("not found")
 	}
 
+	if u.IsDeleted == true {
+		return nil, errors.New("is deleted")
+	}
+
 	return u, nil
 }
 
@@ -124,6 +129,17 @@ func (s *ShortenerService) GetManyByUserID(userID string) ([]*model.URLResponse,
 	}
 
 	return responses, nil
+}
+
+func (s *ShortenerService) DeleteUserURLs(userID string, codes []string) error {
+	for _, short := range codes {
+		s.DeleteURLService.Enqueue(model.DeleteURLTask{
+			UserID: userID,
+			Short:  short,
+		})
+	}
+
+	return nil
 }
 
 func (s *ShortenerService) HashURL(original string) string {

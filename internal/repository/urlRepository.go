@@ -13,4 +13,5 @@ type URLRepository interface {
 	FindByCode(code string) (*model.URL, error)
 	SaveMany(u []*model.URL) error
 	FindManyByUserID(userID string) ([]*model.URL, error)
+	DeleteManyByCodes(userId string, codes []string) error
 }

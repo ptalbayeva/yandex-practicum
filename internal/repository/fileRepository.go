@@ -12,6 +12,7 @@ import (
 
 type FileRepository struct {
 	fileStoragePath string
+	data            []*model.URL
 }
 
 type Event struct {
@@ -22,7 +23,7 @@ type Event struct {
 }
 
 func NewFileRepository(fileStoragePath string) *FileRepository {
-	return &FileRepository{fileStoragePath: fileStoragePath}
+	return &FileRepository{fileStoragePath: fileStoragePath, data: make([]*model.URL, 0)}
 }
 
 func newEvent(originalURL string, shortURL string) *Event {
@@ -74,7 +75,7 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 		}
 
 		if event.ShortURL == code {
-			return model.NewURL(event.ShortURL, event.OriginalURL, nil, event.UserID), nil
+			return model.NewURL(event.ShortURL, event.OriginalURL, nil, event.UserID, false), nil
 		}
 	}
 
@@ -131,7 +132,7 @@ func (f *FileRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 		}
 
 		if event.UserID == userID {
-			url := model.NewURL(event.ShortURL, event.OriginalURL, nil, userID)
+			url := model.NewURL(event.ShortURL, event.OriginalURL, nil, userID, false)
 			urls = append(urls, url)
 
 			continue
@@ -145,4 +146,38 @@ func (f *FileRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	}
 
 	return urls, nil
+}
+
+func (f *FileRepository) DeleteManyByCodes(userID string, codes []string) error {
+	if len(codes) == 0 {
+		return nil
+	}
+
+	shortUrls := make(map[string]struct{}, len(codes))
+	for _, c := range codes {
+		shortUrls[c] = struct{}{}
+	}
+
+	var changed bool
+
+	for _, url := range f.data {
+		if url.UserID != userID || url.IsDeleted {
+			continue
+		}
+
+		if _, ok := shortUrls[url.Code]; ok {
+			url.IsDeleted = true
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	if err := os.Truncate(f.fileStoragePath, 0); err != nil {
+		return err
+	}
+
+	return f.SaveMany(f.data)
 }

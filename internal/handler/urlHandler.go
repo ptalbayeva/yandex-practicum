@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -214,4 +215,27 @@ func getUserID(r *http.Request) string {
 	}
 
 	return userID
+}
+
+func (h *Handler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := g.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var codes []string
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&codes); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	log.Println(codes)
+	err := h.shortener.DeleteUserURLs(userID, codes)
+	if err != nil {
+		http.Error(w, "failed to delete urls", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }

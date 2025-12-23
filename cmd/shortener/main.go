@@ -31,6 +31,9 @@ func main() {
 }
 
 func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	c := config.New()
 
 	if err := g.Initialize(c.LogLevel); err != nil {
@@ -51,7 +54,10 @@ func run() error {
 
 	defer callback()
 
-	shortenerService := service.NewShortenerService(repo, c.BaseURL)
+	deleteURLService := service.NewDeleteURLService(repo, 100)
+	go deleteURLService.Run(ctx)
+
+	shortenerService := service.NewShortenerService(repo, c.BaseURL, *deleteURLService)
 	urlHandler := handler.NewHandler(shortenerService, db)
 
 	r := chi.NewRouter()
@@ -64,6 +70,7 @@ func run() error {
 	r.Get("/api/user/urls", urlHandler.GetURLS)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
 	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
+	r.Delete("/api/user/urls", urlHandler.DeleteUserURLs)
 	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{

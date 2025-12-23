@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 )
 
@@ -24,8 +25,8 @@ func (r *DBRepository) Save(u *model.URL) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	_, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten, user_id)"+
-		"VALUES ($1, $2, $3, $4)", uuid.NewString(), u.Original, u.Code, u.UserID)
+	_, err := r.db.ExecContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten, user_id, is_deleted)"+
+		"VALUES ($1, $2, $3, $4, $5)", uuid.NewString(), u.Original, u.Code, u.UserID, u.IsDeleted)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -68,7 +69,7 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 		return err
 	}
 
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten, user_id) VALUES ($1, $2, $3, $4)"+
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO shorten_urls (uuid, original, shorten, user_id, is_deleted) VALUES ($1, $2, $3, $4, $5)"+
 		"ON CONFLICT (original) DO NOTHING")
 	if err != nil {
 		return err
@@ -77,7 +78,7 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	defer stmt.Close()
 
 	for _, u := range urls {
-		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code, u.UserID)
+		_, fail := stmt.ExecContext(ctx, u.UID, u.Original, u.Code, u.UserID, u.IsDeleted)
 		if fail != nil {
 			return fail
 		}
@@ -92,7 +93,7 @@ func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	defer cancel()
 
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT uuid, original, shorten, user_id FROM shorten_urls WHERE user_id = $1", userID)
+		"SELECT uuid, original, shorten, user_id FROM shorten_urls WHERE user_id = $1 AND is_deleted = false", userID)
 
 	if err != nil {
 		return nil, err
@@ -118,4 +119,26 @@ func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	}
 
 	return urls, nil
+}
+
+func (r *DBRepository) DeleteManyByCodes(userId string, codes []string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	stmt, err := tx.PrepareContext(ctx, "UPDATE shorten_urls SET is_deleted=true WHERE user_id = $1 AND shorten = $2")
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.ExecContext(ctx, userId, pq.Array(codes))
+
+	defer stmt.Close()
+
+	return err
 }

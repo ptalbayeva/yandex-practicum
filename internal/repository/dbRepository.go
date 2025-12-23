@@ -42,11 +42,11 @@ func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 	defer cancel()
 
 	url := r.db.QueryRowContext(ctx,
-		"SELECT original, shorten FROM shorten_urls  WHERE shorten = $1", code)
+		"SELECT original, shorten, is_deleted FROM shorten_urls  WHERE shorten = $1", code)
 
 	var URL model.URL
 
-	err := url.Scan(&URL.Original, &URL.Code)
+	err := url.Scan(&URL.Original, &URL.Code, &URL.IsDeleted)
 
 	if err != nil {
 		return nil, err

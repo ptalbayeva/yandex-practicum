@@ -151,6 +151,10 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if u.IsDeleted {
+		http.Error(w, "deleted", http.StatusGone)
+	}
+
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
 }
 

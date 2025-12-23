@@ -106,7 +106,7 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 		return nil, errors.New("not found")
 	}
 
-	if u.IsDeleted == true {
+	if u.IsDeleted {
 		return nil, errors.New("is deleted")
 	}
 

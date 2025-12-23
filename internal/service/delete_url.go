@@ -37,6 +37,12 @@ func (w *DeleteURLService) Run(ctx context.Context) {
 	buffer := make([]model.DeleteURLTask, 0, maxBatchSize)
 
 	flush := func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Println("panic in delete:", r)
+			}
+		}()
+
 		if len(buffer) == 0 {
 			return
 		}
@@ -48,7 +54,7 @@ func (w *DeleteURLService) Run(ctx context.Context) {
 
 		for userID, codes := range grouped {
 			if err := w.repository.DeleteManyByCodes(userID, codes); err != nil {
-				log.Println("could not delete user URLs:" + err.Error())
+				log.Println("could not delete user URLs:", err)
 			}
 		}
 
@@ -58,12 +64,30 @@ func (w *DeleteURLService) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			flush()
-			return
+			for {
+				select {
+				case task, ok := <-w.in:
+					if !ok {
+						flush()
+						return
+					}
+					buffer = append(buffer, task)
+					if len(buffer) >= maxBatchSize {
+						flush()
+					}
+				default:
+					flush()
+					return
+				}
+			}
 
-		case task := <-w.in:
+		case task, ok := <-w.in:
+			if !ok {
+				flush()
+				return
+			}
+
 			buffer = append(buffer, task)
-
 			if len(buffer) >= maxBatchSize {
 				flush()
 			}

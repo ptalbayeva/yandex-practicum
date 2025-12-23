@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -231,7 +230,6 @@ func (h *Handler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(codes)
 	err := h.shortener.DeleteUserURLs(userID, codes)
 	if err != nil {
 		http.Error(w, "failed to delete urls", http.StatusInternalServerError)

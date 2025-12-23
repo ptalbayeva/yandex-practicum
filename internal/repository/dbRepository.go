@@ -120,25 +120,22 @@ func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 
 	return urls, nil
 }
+func (r *DBRepository) DeleteManyByCodes(userID string, codes []string) error {
+	if len(codes) == 0 {
+		return nil
+	}
 
-func (r *DBRepository) DeleteManyByCodes(userId string, codes []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	tx, err := r.db.Begin()
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
+	query := `
+		UPDATE shorten_urls
+		SET is_deleted = true
+		WHERE user_id = $1
+		  AND shorten = ANY($2)
+		  AND is_deleted = false
+	`
 
-	stmt, err := tx.PrepareContext(ctx, "UPDATE shorten_urls SET is_deleted=true WHERE user_id = $1 AND shorten = $2")
-	if err != nil {
-		return err
-	}
-
-	_, err = stmt.ExecContext(ctx, userId, pq.Array(codes))
-
-	defer stmt.Close()
-
+	_, err := r.db.ExecContext(ctx, query, userID, pq.Array(codes))
 	return err
 }

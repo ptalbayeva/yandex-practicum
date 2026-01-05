@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -153,6 +154,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 
 	if u.IsDeleted {
 		http.Error(w, "deleted", http.StatusGone)
+		return
 	}
 
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
@@ -161,13 +163,14 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	if userID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.StatusText(http.StatusUnauthorized)
 		return
 	}
 	results, err := h.shortener.GetManyByUserID(userID)
 
 	if err != nil {
-		http.Error(w, "invalid cookie", http.StatusInternalServerError)
+		http.StatusText(http.StatusInternalServerError)
+		log.Println("Error while getting urls", err)
 		return
 	}
 

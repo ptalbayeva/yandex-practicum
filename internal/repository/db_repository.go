@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -96,6 +98,7 @@ func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 		"SELECT uuid, original, shorten, user_id FROM shorten_urls WHERE user_id = $1 AND is_deleted = false", userID)
 
 	if err != nil {
+		log.Println(fmt.Errorf("error while executiing %w", err))
 		return nil, err
 	}
 

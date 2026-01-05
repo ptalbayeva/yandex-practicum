@@ -163,13 +163,13 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	if userID == "" {
-		http.StatusText(http.StatusUnauthorized)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	results, err := h.shortener.GetManyByUserID(userID)
 
 	if err != nil {
-		http.StatusText(http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		log.Println("Error while getting urls", err)
 		return
 	}

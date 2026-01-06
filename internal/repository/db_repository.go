@@ -5,14 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
+	g "github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/model"
+	"go.uber.org/zap"
 )
 
 type DBRepository struct {
@@ -98,8 +99,8 @@ func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 		"SELECT uuid, original, shorten, user_id FROM shorten_urls WHERE user_id = $1 AND is_deleted = false", userID)
 
 	if err != nil {
-		log.Println(fmt.Errorf("error while executiing %w", err))
-		return nil, err
+		g.Log.Error("error while getting user's URLs", zap.Error(err))
+		return nil, fmt.Errorf("error while getting user's URLs %w", err)
 	}
 
 	defer rows.Close()

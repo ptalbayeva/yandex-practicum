@@ -17,15 +17,17 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"github.com/yandex-practicum/shorten-url/pkg/audit"
 )
 
 type Handler struct {
-	shortener *service.ShortenerService
-	db        *sql.DB
+	shortener    *service.ShortenerService
+	db           *sql.DB
+	auditService audit.Publisher
 }
 
-func NewHandler(s *service.ShortenerService, db *sql.DB) *Handler {
-	return &Handler{shortener: s, db: db}
+func NewHandler(s *service.ShortenerService, db *sql.DB, auditService audit.Publisher) *Handler {
+	return &Handler{shortener: s, db: db, auditService: auditService}
 }
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +55,8 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	var fullURL string
 
-	u, err := h.shortener.Shorten(originalURL, getUserID(r))
+	userID := getUserID(r)
+	u, err := h.shortener.Shorten(originalURL, userID)
 
 	w.Header().Set("Content-Type", "text/plain")
 	if err != nil {
@@ -71,6 +74,14 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	fullURL = fmt.Sprintf("%s/%s", h.shortener.BaseURL, u.Code)
 	w.WriteHeader(http.StatusCreated)
+
+	h.auditService.Notify(
+		audit.Event{
+			TS:     time.Now().Unix(),
+			Action: "shorten",
+			UserID: userID,
+			URL:    originalURL,
+		})
 
 	_, err = w.Write([]byte(fullURL))
 
@@ -156,6 +167,14 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "deleted", http.StatusGone)
 		return
 	}
+
+	h.auditService.Notify(
+		audit.Event{
+			TS:     time.Now().Unix(),
+			Action: "follow",
+			UserID: getUserID(r),
+			URL:    u.Original,
+		})
 
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
 }

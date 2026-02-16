@@ -21,6 +21,7 @@ import (
 	g "github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"github.com/yandex-practicum/shorten-url/pkg/audit"
 	"go.uber.org/zap"
 )
 
@@ -40,6 +41,10 @@ func run() error {
 		return err
 	}
 
+	auditService, err := initAudit(c)
+
+	auditService.Start()
+
 	db, err := sql.Open("pgx", c.DatabaseDSN)
 	if err != nil {
 		return err
@@ -58,7 +63,7 @@ func run() error {
 	go deleteURLService.Run(ctx)
 
 	shortenerService := service.NewShortenerService(repo, c.BaseURL, *deleteURLService)
-	urlHandler := handler.NewHandler(shortenerService, db)
+	urlHandler := handler.NewHandler(shortenerService, db, auditService)
 
 	r := chi.NewRouter()
 	r.Use(g.RequestLogger())
@@ -94,6 +99,25 @@ func run() error {
 	}
 
 	return nil
+}
+
+func initAudit(config *config.Config) (audit.Publisher, error) {
+	svc := audit.NewPublisherService(100)
+
+	if config.AuditFile != "" {
+		err, fileObserver := audit.NewFileObserver(config.AuditFile)
+		if err != nil {
+			return nil, err
+		}
+		svc.Subscribe(fileObserver)
+	}
+
+	if config.AuditURL != "" {
+		httpObserver := audit.NewApiObserver(config.AuditURL)
+		svc.Subscribe(httpObserver)
+	}
+
+	return svc, nil
 }
 
 func initRepository(cfg config.Config) (repository.URLRepository, func(), error) {

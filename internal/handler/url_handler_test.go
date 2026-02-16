@@ -18,6 +18,7 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"github.com/yandex-practicum/shorten-url/pkg/audit"
 )
 
 var testC *config.Config
@@ -101,7 +102,8 @@ func Test_Shorten(t *testing.T) {
 			repo := repository.NewMemoryRepo()
 			deleteURL := service.NewDeleteURLService(repo, 100)
 			h := &Handler{
-				shortener: service.NewShortenerService(repo, testC.BaseURL, *deleteURL),
+				shortener:    service.NewShortenerService(repo, testC.BaseURL, *deleteURL),
+				auditService: audit.NewNoopPublisher(),
 			}
 			h.Shorten(w, request)
 
@@ -274,7 +276,8 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 
 	deleteURL := service.NewDeleteURLService(repo, 100)
 	s := service.NewShortenerService(repo, testC.BaseURL, *deleteURL)
-	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}).Redirect)
+	noopAudit := audit.NewNoopPublisher()
+	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}, noopAudit).Redirect)
 
 	r.Get("/{id}", handler)
 

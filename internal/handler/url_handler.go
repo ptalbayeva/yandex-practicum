@@ -172,7 +172,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		audit.Event{
 			TS:     time.Now().Unix(),
 			Action: "follow",
-			UserID: getUserID(r),
+			UserID: u.UserID,
 			URL:    u.Original,
 		})
 

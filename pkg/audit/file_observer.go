@@ -9,15 +9,15 @@ type FileObserver struct {
 	file *os.File
 }
 
-func NewFileObserver(filepath string) (error, *FileObserver) {
+func NewFileObserver(filepath string) (*FileObserver, error) {
 	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	defer file.Close()
 
-	return nil, &FileObserver{file: file}
+	return &FileObserver{file: file}, nil
 }
 
 func (f FileObserver) Publish(event Event) error {

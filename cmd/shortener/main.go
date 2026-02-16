@@ -43,6 +43,10 @@ func run() error {
 
 	auditService, err := initAudit(c)
 
+	if err != nil {
+		return err
+	}
+
 	auditService.Start()
 
 	db, err := sql.Open("pgx", c.DatabaseDSN)
@@ -105,7 +109,7 @@ func initAudit(config *config.Config) (audit.Publisher, error) {
 	svc := audit.NewPublisherService(100)
 
 	if config.AuditFile != "" {
-		err, fileObserver := audit.NewFileObserver(config.AuditFile)
+		fileObserver, err := audit.NewFileObserver(config.AuditFile)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +117,7 @@ func initAudit(config *config.Config) (audit.Publisher, error) {
 	}
 
 	if config.AuditURL != "" {
-		httpObserver := audit.NewApiObserver(config.AuditURL)
+		httpObserver := audit.NewAPIObserver(config.AuditURL)
 		svc.Subscribe(httpObserver)
 	}
 

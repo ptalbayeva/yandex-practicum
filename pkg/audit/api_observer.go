@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-type ApiObserver struct {
+type APIObserver struct {
 	client *http.Client
 	url    string
 }
 
-func NewApiObserver(url string) *ApiObserver {
-	return &ApiObserver{
+func NewAPIObserver(url string) *APIObserver {
+	return &APIObserver{
 		client: &http.Client{
 			Timeout: time.Second * 5,
 		},
@@ -21,7 +21,7 @@ func NewApiObserver(url string) *ApiObserver {
 	}
 }
 
-func (a ApiObserver) Publish(event Event) error {
+func (a APIObserver) Publish(event Event) error {
 	data, err := json.Marshal(event)
 
 	if err != nil {

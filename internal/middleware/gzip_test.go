@@ -1,4 +1,4 @@
-package middleware
+package g_test
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
+	g "github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
@@ -19,7 +20,7 @@ import (
 
 func TestGzipCompression(t *testing.T) {
 	router := chi.NewRouter()
-	router.Use(GzipMiddleware)
+	router.Use(g.GzipMiddleware)
 	url := &model.URL{
 		Code:     "FgAJzmB",
 		Original: "https://yandex.ru",
@@ -29,7 +30,8 @@ func TestGzipCompression(t *testing.T) {
 	repo.Save(url)
 	require.NoError(t, repo.Save(url))
 
-	s := service.NewShortenerService(repo, "http://localhost:8081")
+	deleteURL := service.NewDeleteURLService(repo, 100)
+	s := service.NewShortenerService(repo, "http://localhost:8081", *deleteURL)
 	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}).ShortenJSON)
 	router.Post("/api/shorten", h)
 

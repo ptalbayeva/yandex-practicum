@@ -18,7 +18,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/yandex-practicum/shorten-url/internal/config"
 	"github.com/yandex-practicum/shorten-url/internal/handler"
-	"github.com/yandex-practicum/shorten-url/internal/middleware"
+	g "github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 	"go.uber.org/zap"
@@ -26,14 +26,17 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		middleware.Log.Fatal("Ошибка на сервере", zap.Error(err))
+		g.Log.Fatal("Ошибка на сервере", zap.Error(err))
 	}
 }
 
 func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	c := config.New()
 
-	if err := middleware.Initialize(c.LogLevel); err != nil {
+	if err := g.Initialize(c.LogLevel); err != nil {
 		return err
 	}
 
@@ -51,17 +54,23 @@ func run() error {
 
 	defer callback()
 
-	shortenerService := service.NewShortenerService(repo, c.BaseURL)
+	deleteURLService := service.NewDeleteURLService(repo, 100)
+	go deleteURLService.Run(ctx)
+
+	shortenerService := service.NewShortenerService(repo, c.BaseURL, *deleteURLService)
 	urlHandler := handler.NewHandler(shortenerService, db)
 
 	r := chi.NewRouter()
-	r.Use(middleware.RequestLogger())
-	r.Use(middleware.GzipMiddleware)
+	r.Use(g.RequestLogger())
+	r.Use(g.GzipMiddleware)
+	r.Use(g.Auth([]byte(c.AuthKey)))
 
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
+	r.Get("/api/user/urls", urlHandler.GetURLS)
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
 	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
+	r.Delete("/api/user/urls", urlHandler.DeleteUserURLs)
 	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{

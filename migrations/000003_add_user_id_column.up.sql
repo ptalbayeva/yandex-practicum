@@ -1,0 +1,3 @@
+ALTER TABLE shorten_urls
+ADD COLUMN user_id VARCHAR(50),
+ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;

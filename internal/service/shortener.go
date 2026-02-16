@@ -14,15 +14,16 @@ import (
 )
 
 type ShortenerService struct {
-	repo    repository.URLRepository
-	BaseURL string
+	repo             repository.URLRepository
+	BaseURL          string
+	DeleteURLService DeleteURLService
 }
 
-func NewShortenerService(repo repository.URLRepository, baseURL string) *ShortenerService {
-	return &ShortenerService{repo: repo, BaseURL: baseURL}
+func NewShortenerService(repo repository.URLRepository, baseURL string, deleteURL DeleteURLService) *ShortenerService {
+	return &ShortenerService{repo: repo, BaseURL: baseURL, DeleteURLService: deleteURL}
 }
 
-func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
+func (s *ShortenerService) Shorten(original string, userID string) (*model.URL, error) {
 	if ok, _ := s.isValidURL(original); !ok {
 		return nil, errors.New("invalid URL")
 	}
@@ -39,7 +40,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 			continue
 		}
 
-		u := model.NewURL(code, original, nil)
+		u := model.NewURL(code, original, nil, userID, false)
 
 		if err := s.repo.Save(u); err != nil {
 			if errors.Is(err, repository.ErrConflict) {
@@ -53,7 +54,7 @@ func (s *ShortenerService) Shorten(original string) (*model.URL, error) {
 	}
 }
 
-func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest) ([]*model.BatchURLResponse, error) {
+func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest, userID string) ([]*model.BatchURLResponse, error) {
 	responses := make([]*model.BatchURLResponse, 0, len(items))
 	urls := make([]*model.URL, 0, len(items))
 
@@ -80,7 +81,7 @@ func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest) ([]*model
 				continue
 			}
 
-			u := model.NewURL(code, item.OriginalURL, item.CorrelationID)
+			u := model.NewURL(code, item.OriginalURL, item.CorrelationID, userID, false)
 			urls = append(urls, u)
 			responses = append(responses, &model.BatchURLResponse{
 				CorrelationID: item.CorrelationID,
@@ -106,6 +107,35 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	}
 
 	return u, nil
+}
+
+func (s *ShortenerService) GetManyByUserID(userID string) ([]*model.URLResponse, error) {
+	urls, err := s.repo.FindManyByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]*model.URLResponse, 0, len(urls))
+
+	for _, u := range urls {
+		responses = append(responses, &model.URLResponse{
+			ShortenURL:  s.BaseURL + "/" + u.Code,
+			OriginalURL: u.Original,
+		})
+	}
+
+	return responses, nil
+}
+
+func (s *ShortenerService) DeleteUserURLs(userID string, codes []string) error {
+	for _, short := range codes {
+		s.DeleteURLService.Enqueue(model.DeleteURLTask{
+			UserID: userID,
+			Short:  short,
+		})
+	}
+
+	return nil
 }
 
 func (s *ShortenerService) HashURL(original string) string {

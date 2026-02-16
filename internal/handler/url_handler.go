@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
@@ -51,7 +53,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	var fullURL string
 
-	u, err := h.shortener.Shorten(originalURL)
+	u, err := h.shortener.Shorten(originalURL, getUserID(r))
 
 	w.Header().Set("Content-Type", "text/plain")
 	if err != nil {
@@ -90,7 +92,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	response := model.Response{}
 	w.Header().Set("Content-Type", "application/json")
 
-	result, err := h.shortener.Shorten(request.URL)
+	result, err := h.shortener.Shorten(request.URL, getUserID(r))
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
 			response.Result = fmt.Sprintf("%s/%s", h.shortener.BaseURL, result.Code)
@@ -126,7 +128,7 @@ func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.shortener.ShortenBatch(reqs)
+	results, err := h.shortener.ShortenBatch(reqs, getUserID(r))
 	if err != nil {
 		http.Error(w, "failed to shorten", http.StatusInternalServerError)
 		return
@@ -150,7 +152,40 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if u.IsDeleted {
+		http.Error(w, "deleted", http.StatusGone)
+		return
+	}
+
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
+}
+
+func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	if userID == "" {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	results, err := h.shortener.GetManyByUserID(userID)
+
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		log.Println("Error while getting urls", err)
+		return
+	}
+
+	if len(results) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if fail := json.NewEncoder(w).Encode(results); fail != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
@@ -177,4 +212,35 @@ func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "content type must be application/json", http.StatusBadRequest)
 		return
 	}
+}
+
+func getUserID(r *http.Request) string {
+	userID, ok := g.UserIDFromContext(r.Context())
+	if !ok {
+		return ""
+	}
+
+	return userID
+}
+
+func (h *Handler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := g.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var codes []string
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&codes); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	err := h.shortener.DeleteUserURLs(userID, codes)
+	if err != nil {
+		http.Error(w, "failed to delete urls", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }

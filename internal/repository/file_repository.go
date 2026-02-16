@@ -12,16 +12,18 @@ import (
 
 type FileRepository struct {
 	fileStoragePath string
+	data            []*model.URL
 }
 
 type Event struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id,omitempty"`
 }
 
 func NewFileRepository(fileStoragePath string) *FileRepository {
-	return &FileRepository{fileStoragePath: fileStoragePath}
+	return &FileRepository{fileStoragePath: fileStoragePath, data: make([]*model.URL, 0)}
 }
 
 func newEvent(originalURL string, shortURL string) *Event {
@@ -73,7 +75,7 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 		}
 
 		if event.ShortURL == code {
-			return model.NewURL(event.ShortURL, event.OriginalURL, nil), nil
+			return model.NewURL(event.ShortURL, event.OriginalURL, nil, event.UserID, false), nil
 		}
 	}
 
@@ -106,4 +108,76 @@ func (f *FileRepository) SaveMany(urls []*model.URL) error {
 	}
 
 	return nil
+}
+
+func (f *FileRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
+	file, err := os.Open(f.fileStoragePath)
+
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	var urls []*model.URL
+
+	for scanner.Scan() {
+		var event Event
+
+		data := scanner.Bytes()
+		err = json.Unmarshal(data, &event)
+		if err != nil {
+			continue
+		}
+
+		if event.UserID == userID {
+			url := model.NewURL(event.ShortURL, event.OriginalURL, nil, userID, false)
+			urls = append(urls, url)
+
+			continue
+		}
+
+		if err = scanner.Err(); err != nil {
+			return nil, err
+		}
+
+		return urls, nil
+	}
+
+	return urls, nil
+}
+
+func (f *FileRepository) DeleteManyByCodes(userID string, codes []string) error {
+	if len(codes) == 0 {
+		return nil
+	}
+
+	shortUrls := make(map[string]struct{}, len(codes))
+	for _, c := range codes {
+		shortUrls[c] = struct{}{}
+	}
+
+	var changed bool
+
+	for _, url := range f.data {
+		if url.UserID != userID || url.IsDeleted {
+			continue
+		}
+
+		if _, ok := shortUrls[url.Code]; ok {
+			url.IsDeleted = true
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	if err := os.Truncate(f.fileStoragePath, 0); err != nil {
+		return err
+	}
+
+	return f.SaveMany(f.data)
 }

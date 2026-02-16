@@ -11,6 +11,7 @@ type Config struct {
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	AuthKey         string `env:"AUTH_KEY" envDefault:"secret_key"`
 }
 
 func New() *Config {

@@ -99,8 +99,9 @@ func Test_Shorten(t *testing.T) {
 			request.Header.Set("Content-Type", test.contentType)
 			w := httptest.NewRecorder()
 			repo := repository.NewMemoryRepo()
+			deleteURL := service.NewDeleteURLService(repo, 100)
 			h := &Handler{
-				shortener: service.NewShortenerService(repo, testC.BaseURL),
+				shortener: service.NewShortenerService(repo, testC.BaseURL, *deleteURL),
 			}
 			h.Shorten(w, request)
 
@@ -117,10 +118,13 @@ func Test_Shorten(t *testing.T) {
 	}
 }
 func TestHandler_ShortenJSON(t *testing.T) {
+	repo := repository.NewMemoryRepo()
+	deleteURL := service.NewDeleteURLService(repo, 100)
 	handler := &Handler{
 		shortener: service.NewShortenerService(
-			repository.NewMemoryRepo(),
+			repo,
 			testC.BaseURL,
+			*deleteURL,
 		),
 	}
 	h := http.HandlerFunc(handler.ShortenJSON)
@@ -268,7 +272,8 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 	repo.Save(url)
 	require.NoError(t, repo.Save(url))
 
-	s := service.NewShortenerService(repo, testC.BaseURL)
+	deleteURL := service.NewDeleteURLService(repo, 100)
+	s := service.NewShortenerService(repo, testC.BaseURL, *deleteURL)
 	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}).Redirect)
 
 	r.Get("/{id}", handler)
@@ -300,12 +305,10 @@ func TestHandler_BatchShorten(t *testing.T) {
 		},
 	}
 
-	handler := &Handler{
-		shortener: service.NewShortenerService(
-			repository.NewMemoryRepo(),
-			testC.BaseURL,
-		),
-	}
+	repo := repository.NewMemoryRepo()
+	deleteURL := service.NewDeleteURLService(repo, 100)
+	s := service.NewShortenerService(repo, testC.BaseURL, *deleteURL)
+	handler := &Handler{shortener: s}
 	h := http.HandlerFunc(handler.BatchShorten)
 	srv := httptest.NewServer(h)
 

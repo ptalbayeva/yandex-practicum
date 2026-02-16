@@ -16,6 +16,7 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"github.com/yandex-practicum/shorten-url/pkg/audit"
 )
 
 func TestGzipCompression(t *testing.T) {
@@ -32,7 +33,7 @@ func TestGzipCompression(t *testing.T) {
 
 	deleteURL := service.NewDeleteURLService(repo, 100)
 	s := service.NewShortenerService(repo, "http://localhost:8081", *deleteURL)
-	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}).ShortenJSON)
+	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}, audit.NewNoopPublisher()).ShortenJSON)
 	router.Post("/api/shorten", h)
 
 	srv := httptest.NewServer(router)

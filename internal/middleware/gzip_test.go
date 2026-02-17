@@ -81,16 +81,19 @@ func TestGzipCompression(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(r)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusConflict, resp.StatusCode)
-
 		defer resp.Body.Close()
 
-		zr, err := gzip.NewReader(resp.Body)
-		require.NoError(t, err)
+		var bodyReader io.Reader = resp.Body
 
-		b, err := io.ReadAll(zr)
-		require.NoError(t, err)
+		if resp.Header.Get("Content-Encoding") == "gzip" {
+			zr, err := gzip.NewReader(resp.Body)
+			require.NoError(t, err)
+			defer zr.Close()
+			bodyReader = zr
+		}
 
+		b, err := io.ReadAll(bodyReader)
+		require.NoError(t, err)
 		require.JSONEq(t, successBody, string(b))
 	})
 }

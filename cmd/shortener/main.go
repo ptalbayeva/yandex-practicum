@@ -11,7 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "net/http/pprof"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -74,6 +77,7 @@ func run() error {
 	r.Use(g.GzipMiddleware)
 	r.Use(g.Auth([]byte(c.AuthKey)))
 
+	r.Mount("/debug", middleware.Profiler())
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Get("/api/user/urls", urlHandler.GetURLS)

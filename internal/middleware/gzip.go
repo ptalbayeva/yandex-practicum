@@ -20,6 +20,7 @@ type gzipResponseWriter struct {
 	gzWriter *gzip.Writer
 }
 
+// WriteHeader установка заголовка
 func (g *gzipResponseWriter) WriteHeader(statusCode int) {
 	if (statusCode >= 300 && statusCode < 400) || statusCode == http.StatusNoContent || statusCode >= 400 {
 		g.Header().Del("Content-Encoding")
@@ -27,6 +28,7 @@ func (g *gzipResponseWriter) WriteHeader(statusCode int) {
 	g.ResponseWriter.WriteHeader(statusCode)
 }
 
+// Write записывает данные
 func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 	if g.Header().Get("Content-Encoding") != "gzip" {
 		return g.ResponseWriter.Write(b)
@@ -40,6 +42,7 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 	return g.gzWriter.Write(b)
 }
 
+// Close закрывает writer
 func (g *gzipResponseWriter) Close() {
 	if g.gzWriter != nil {
 		g.gzWriter.Close()
@@ -48,6 +51,7 @@ func (g *gzipResponseWriter) Close() {
 	}
 }
 
+// GzipMiddleware сжатие
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {

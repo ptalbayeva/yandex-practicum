@@ -16,14 +16,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// DBRepository репозиторий для работы с БД
 type DBRepository struct {
 	db *sql.DB
 }
 
+// NewDBRepository создание репозитория для работы с БД
 func NewDBRepository(db *sql.DB) *DBRepository {
 	return &DBRepository{db: db}
 }
 
+// Save сохранение записи в таблицу
 func (r *DBRepository) Save(u *model.URL) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
@@ -40,6 +43,7 @@ func (r *DBRepository) Save(u *model.URL) error {
 	return err
 }
 
+// FindByCode ищет запись по сокращенному url
 func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
@@ -58,10 +62,12 @@ func (r *DBRepository) FindByCode(code string) (*model.URL, error) {
 	return &URL, nil
 }
 
+// Close закрывает соединение
 func (r *DBRepository) Close() error {
 	return r.db.Close()
 }
 
+// SaveMany сохранение несколько записей в таблицу
 func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
@@ -91,6 +97,7 @@ func (r *DBRepository) SaveMany(urls []*model.URL) error {
 	return tx.Commit()
 }
 
+// FindManyByUserID ищет несколько записей по user_id
 func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
@@ -124,6 +131,8 @@ func (r *DBRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 
 	return urls, nil
 }
+
+// DeleteManyByCodes удаление несколько записей по переданному сокращенному url
 func (r *DBRepository) DeleteManyByCodes(userID string, codes []string) error {
 	if len(codes) == 0 {
 		return nil

@@ -20,16 +20,19 @@ import (
 	"github.com/yandex-practicum/shorten-url/pkg/audit"
 )
 
+// Handler хендлер для работы с url
 type Handler struct {
 	shortener    *service.ShortenerService
 	db           *sql.DB
 	auditService audit.Publisher
 }
 
+// NewHandler создание нового хендлера
 func NewHandler(s *service.ShortenerService, db *sql.DB, auditService audit.Publisher) *Handler {
 	return &Handler{shortener: s, db: db, auditService: auditService}
 }
 
+// Shorten сокращение url-a
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -90,6 +93,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ShortenJSON сокращение url-a при передачи json
 func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	h.validateJSONMethod(w, r)
 
@@ -130,6 +134,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// BatchShorten сокращение множетсво url
 func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 	h.validateJSONMethod(w, r)
 
@@ -154,6 +159,7 @@ func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Redirect редирект на оригинальную ссылку
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "id")
 
@@ -179,6 +185,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
 }
 
+// GetURLS получение всех сокращенных url по пользователю
 func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	if userID == "" {
@@ -207,6 +214,30 @@ func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteUserURLs удаление всех сокращенных url-ов пользователя
+func (h *Handler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := g.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var codes []string
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&codes); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	err := h.shortener.DeleteUserURLs(userID, codes)
+	if err != nil {
+		http.Error(w, "failed to delete urls", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// Ping проверка подключения к БД
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -240,26 +271,4 @@ func getUserID(r *http.Request) string {
 	}
 
 	return userID
-}
-
-func (h *Handler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, ok := g.UserIDFromContext(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	var codes []string
-	dec := json.NewDecoder(r.Body)
-	if err := dec.Decode(&codes); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	err := h.shortener.DeleteUserURLs(userID, codes)
-	if err != nil {
-		http.Error(w, "failed to delete urls", http.StatusInternalServerError)
-	}
-
-	w.WriteHeader(http.StatusAccepted)
 }

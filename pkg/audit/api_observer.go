@@ -7,11 +7,13 @@ import (
 	"time"
 )
 
+// APIObserver http наблюдатель событий
 type APIObserver struct {
 	client *http.Client
 	url    string
 }
 
+// NewAPIObserver создание http наблюдателя
 func NewAPIObserver(url string) *APIObserver {
 	return &APIObserver{
 		client: &http.Client{
@@ -21,6 +23,7 @@ func NewAPIObserver(url string) *APIObserver {
 	}
 }
 
+// Publish публикует событие
 func (a APIObserver) Publish(event Event) error {
 	data, err := json.Marshal(event)
 

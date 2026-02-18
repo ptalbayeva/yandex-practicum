@@ -2,12 +2,14 @@ package audit
 
 import "sync"
 
+// PublisherService сервис подписчика
 type PublisherService struct {
 	mu        sync.RWMutex
 	observers []Observer
 	events    chan Event
 }
 
+// NewPublisherService создание нового сервиса
 func NewPublisherService(bufferSize int) *PublisherService {
 	return &PublisherService{
 		observers: make([]Observer, 0),

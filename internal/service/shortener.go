@@ -13,16 +13,19 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 )
 
+// ShortenerService сервис для сокращения url
 type ShortenerService struct {
 	repo             repository.URLRepository
 	BaseURL          string
 	DeleteURLService DeleteURLService
 }
 
+// NewShortenerService создание сервиса
 func NewShortenerService(repo repository.URLRepository, baseURL string, deleteURL DeleteURLService) *ShortenerService {
 	return &ShortenerService{repo: repo, BaseURL: baseURL, DeleteURLService: deleteURL}
 }
 
+// Shorten сокращение url
 func (s *ShortenerService) Shorten(original string, userID string) (*model.URL, error) {
 	if ok, _ := s.isValidURL(original); !ok {
 		return nil, errors.New("invalid URL")
@@ -54,6 +57,7 @@ func (s *ShortenerService) Shorten(original string, userID string) (*model.URL, 
 	}
 }
 
+// ShortenBatch сокращение несколько url
 func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest, userID string) ([]*model.BatchURLResponse, error) {
 	responses := make([]*model.BatchURLResponse, 0, len(items))
 	urls := make([]*model.URL, 0, len(items))
@@ -99,6 +103,7 @@ func (s *ShortenerService) ShortenBatch(items []model.BatchURLRequest, userID st
 	return responses, nil
 }
 
+// Resolve находит оригинальный url
 func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	u, err := s.repo.FindByCode(code)
 
@@ -109,6 +114,7 @@ func (s *ShortenerService) Resolve(code string) (*model.URL, error) {
 	return u, nil
 }
 
+// GetManyByUserID получение несколько url по user_id
 func (s *ShortenerService) GetManyByUserID(userID string) ([]*model.URLResponse, error) {
 	urls, err := s.repo.FindManyByUserID(userID)
 	if err != nil {
@@ -127,6 +133,7 @@ func (s *ShortenerService) GetManyByUserID(userID string) ([]*model.URLResponse,
 	return responses, nil
 }
 
+// DeleteUserURLs удаление записей по пользователю
 func (s *ShortenerService) DeleteUserURLs(userID string, codes []string) error {
 	for _, short := range codes {
 		s.DeleteURLService.Enqueue(model.DeleteURLTask{
@@ -138,6 +145,7 @@ func (s *ShortenerService) DeleteUserURLs(userID string, codes []string) error {
 	return nil
 }
 
+// HashURL хэширвоание url
 func (s *ShortenerService) HashURL(original string) string {
 	hash := sha256.Sum256([]byte(original))
 	encoded := base64.URLEncoding.EncodeToString(hash[:])

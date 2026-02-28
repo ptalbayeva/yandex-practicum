@@ -9,11 +9,13 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 )
 
+// DeleteURLService сервис для удаления url
 type DeleteURLService struct {
 	repository repository.URLRepository
 	in         chan model.DeleteURLTask
 }
 
+// NewDeleteURLService создание сервиса
 func NewDeleteURLService(
 	repository repository.URLRepository,
 	bufferSize int,
@@ -21,10 +23,12 @@ func NewDeleteURLService(
 	return &DeleteURLService{repository: repository, in: make(chan model.DeleteURLTask, bufferSize)}
 }
 
+// Enqueue добавление таски в очередь
 func (w *DeleteURLService) Enqueue(task model.DeleteURLTask) {
 	w.in <- task
 }
 
+// Run удаляет url
 func (w *DeleteURLService) Run(ctx context.Context) {
 	const (
 		maxBatchSize = 100

@@ -4,21 +4,54 @@ import (
 	"compress/gzip"
 	"net/http"
 	"strings"
+	"sync"
 )
+
+// Глобальный пул для переиспользования тяжелых объектов gzip.Writer
+var gzPool = sync.Pool{
+	New: func() interface{} {
+		w, _ := gzip.NewWriterLevel(nil, gzip.BestSpeed)
+		return w
+	},
+}
 
 type gzipResponseWriter struct {
 	http.ResponseWriter
-	writer *gzip.Writer
+	gzWriter *gzip.Writer
 }
 
+// WriteHeader установка заголовка
+func (g *gzipResponseWriter) WriteHeader(statusCode int) {
+	if (statusCode >= 300 && statusCode < 400) || statusCode == http.StatusNoContent || statusCode >= 400 {
+		g.Header().Del("Content-Encoding")
+	}
+	g.ResponseWriter.WriteHeader(statusCode)
+}
+
+// Write записывает данные
 func (g *gzipResponseWriter) Write(b []byte) (int, error) {
-	return g.writer.Write(b)
+	if g.Header().Get("Content-Encoding") != "gzip" {
+		return g.ResponseWriter.Write(b)
+	}
+
+	if g.gzWriter == nil {
+		gz := gzPool.Get().(*gzip.Writer)
+		gz.Reset(g.ResponseWriter)
+		g.gzWriter = gz
+	}
+	return g.gzWriter.Write(b)
 }
 
-func (g *gzipResponseWriter) Close() error {
-	return g.writer.Close()
+// Close закрывает writer
+func (g *gzipResponseWriter) Close() {
+	if g.gzWriter != nil {
+		g.gzWriter.Close()
+		gzPool.Put(g.gzWriter)
+		g.gzWriter = nil
+	}
 }
 
+// GzipMiddleware сжатие
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
@@ -27,6 +60,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 				http.Error(w, "invalid gzip body", http.StatusBadRequest)
 				return
 			}
+			defer gzReader.Close()
 			r.Body = gzReader
 		}
 
@@ -36,14 +70,11 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("Content-Encoding", "gzip")
-
-		gzWriter := gzip.NewWriter(w)
-		defer gzWriter.Close()
-
 		gzResponse := &gzipResponseWriter{
 			ResponseWriter: w,
-			writer:         gzWriter,
 		}
+
+		defer gzResponse.Close()
 
 		next.ServeHTTP(gzResponse, r)
 	})

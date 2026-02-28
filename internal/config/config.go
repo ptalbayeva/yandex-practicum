@@ -5,15 +5,19 @@ import (
 	"os"
 )
 
+// Config объект конфига
 type Config struct {
-	Address         string `env:"SERVER_ADDRESS" envDefault:":8080"`
-	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
-	AuthKey         string `env:"AUTH_KEY" envDefault:"secret_key"`
+	Address         string `env:"SERVER_ADDRESS" envDefault:":8080"`           // адрес запуска HTTP сервера
+	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"` // базовый URL
+	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`                 // уровень лога
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`    // путь до файла хранения сокращенных URL
+	DatabaseDSN     string `env:"DATABASE_DSN"`                                // адрес БД
+	AuthKey         string `env:"AUTH_KEY" envDefault:"secret_key"`            // секретный ключ для генерации токена
+	AuditFile       string `env:"AUDIT_FILE" envDefault:"test.txt"`            // файл хранения аудита
+	AuditURL        string `env:"AUDIT_URL" envDefault:""`                     // полный URL удаленного сервера-приёмника
 }
 
+// New создание конфигурации
 func New() *Config {
 	config := &Config{}
 
@@ -21,6 +25,8 @@ func New() *Config {
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Базовый URL")
 	flag.StringVar(&config.FileStoragePath, "f", "", "Путь до файла хранения сокращенных URL")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "Адрес БД")
+	flag.StringVar(&config.AuditFile, "audit-file", "", "Файл хранения аудита")
+	flag.StringVar(&config.AuditURL, "audit-url", "", "Полный URL удаленного сервера-приёмника")
 
 	flag.Parse()
 

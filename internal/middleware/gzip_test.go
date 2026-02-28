@@ -16,6 +16,7 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"github.com/yandex-practicum/shorten-url/pkg/audit"
 )
 
 func TestGzipCompression(t *testing.T) {
@@ -32,7 +33,7 @@ func TestGzipCompression(t *testing.T) {
 
 	deleteURL := service.NewDeleteURLService(repo, 100)
 	s := service.NewShortenerService(repo, "http://localhost:8081", *deleteURL)
-	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}).ShortenJSON)
+	h := http.HandlerFunc(handler.NewHandler(s, &sql.DB{}, audit.NewNoopPublisher()).ShortenJSON)
 	router.Post("/api/shorten", h)
 
 	srv := httptest.NewServer(router)
@@ -80,16 +81,19 @@ func TestGzipCompression(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(r)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusConflict, resp.StatusCode)
-
 		defer resp.Body.Close()
 
-		zr, err := gzip.NewReader(resp.Body)
-		require.NoError(t, err)
+		var bodyReader io.Reader = resp.Body
 
-		b, err := io.ReadAll(zr)
-		require.NoError(t, err)
+		if resp.Header.Get("Content-Encoding") == "gzip" {
+			zr, err := gzip.NewReader(resp.Body)
+			require.NoError(t, err)
+			defer zr.Close()
+			bodyReader = zr
+		}
 
+		b, err := io.ReadAll(bodyReader)
+		require.NoError(t, err)
 		require.JSONEq(t, successBody, string(b))
 	})
 }

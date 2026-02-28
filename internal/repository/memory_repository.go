@@ -8,17 +8,20 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/model"
 )
 
+// MemoryRepo репозиторий для работы с url в памяти
 type MemoryRepo struct {
 	mu   sync.RWMutex
 	data map[string]*model.URL
 }
 
+// NewMemoryRepo создание репозитория
 func NewMemoryRepo() *MemoryRepo {
 	return &MemoryRepo{
 		data: make(map[string]*model.URL),
 	}
 }
 
+// Save сохранение записи в память
 func (r *MemoryRepo) Save(u *model.URL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -28,6 +31,7 @@ func (r *MemoryRepo) Save(u *model.URL) error {
 	return nil
 }
 
+// FindByCode ищет запись по сокращенному url
 func (r *MemoryRepo) FindByCode(code string) (*model.URL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -41,6 +45,7 @@ func (r *MemoryRepo) FindByCode(code string) (*model.URL, error) {
 	return u, nil
 }
 
+// SaveMany сохранение несколько записей в таблицу
 func (r *MemoryRepo) SaveMany(urls []*model.URL) error {
 	r.mu.Lock()
 	for _, u := range urls {
@@ -52,6 +57,7 @@ func (r *MemoryRepo) SaveMany(urls []*model.URL) error {
 	return nil
 }
 
+// FindManyByUserID ищет несколько записей по user_id
 func (r *MemoryRepo) FindManyByUserID(userID string) ([]*model.URL, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -60,6 +66,7 @@ func (r *MemoryRepo) FindManyByUserID(userID string) ([]*model.URL, error) {
 	return urls, nil
 }
 
+// DeleteManyByCodes удаление несколько записей по переданному сокращенному url
 func (r *MemoryRepo) DeleteManyByCodes(userID string, codes []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

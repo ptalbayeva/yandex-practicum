@@ -10,11 +10,13 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/model"
 )
 
+// FileRepository репозиторий для работы с файловой системой
 type FileRepository struct {
 	fileStoragePath string
 	data            []*model.URL
 }
 
+// Event объект записи в файл
 type Event struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
@@ -22,6 +24,7 @@ type Event struct {
 	UserID      string `json:"user_id,omitempty"`
 }
 
+// NewFileRepository создание репозитория
 func NewFileRepository(fileStoragePath string) *FileRepository {
 	return &FileRepository{fileStoragePath: fileStoragePath, data: make([]*model.URL, 0)}
 }
@@ -34,6 +37,7 @@ func newEvent(originalURL string, shortURL string) *Event {
 	}
 }
 
+// Save сохранение записи в файл
 func (f *FileRepository) Save(u *model.URL) error {
 	event := newEvent(u.Original, u.Code)
 	data, err := json.Marshal(event)
@@ -55,6 +59,7 @@ func (f *FileRepository) Save(u *model.URL) error {
 	return nil
 }
 
+// FindByCode ищет запись по сокращенному url
 func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 	file, err := os.Open(f.fileStoragePath)
 
@@ -86,6 +91,7 @@ func (f *FileRepository) FindByCode(code string) (*model.URL, error) {
 	return nil, errors.New("not found")
 }
 
+// SaveMany сохранение несколько записей в таблицу
 func (f *FileRepository) SaveMany(urls []*model.URL) error {
 	file, err := os.OpenFile(f.fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
@@ -110,6 +116,7 @@ func (f *FileRepository) SaveMany(urls []*model.URL) error {
 	return nil
 }
 
+// FindManyByUserID ищет несколько записей по user_id
 func (f *FileRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	file, err := os.Open(f.fileStoragePath)
 
@@ -148,6 +155,7 @@ func (f *FileRepository) FindManyByUserID(userID string) ([]*model.URL, error) {
 	return urls, nil
 }
 
+// DeleteManyByCodes удаление несколько записей по переданному сокращенному url
 func (f *FileRepository) DeleteManyByCodes(userID string, codes []string) error {
 	if len(codes) == 0 {
 		return nil

@@ -19,17 +19,20 @@ const (
 	tokenTTL   = 3 * time.Hour
 )
 
+// Claims данные, используемые при генерации токена
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID string `json:"user_id"`
 }
 
+// UserIDFromContext получение user_id из контекста
 func UserIDFromContext(ctx context.Context) (string, bool) {
 	userID, ok := ctx.Value(userIDContextKey).(string)
 
 	return userID, ok
 }
 
+// Auth авторизация пользователя
 func Auth(key []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

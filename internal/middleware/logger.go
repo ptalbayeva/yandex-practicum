@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Log объект логера
 var Log = zap.NewNop()
 
 type (
@@ -21,6 +22,7 @@ type (
 	}
 )
 
+// Initialize инициализация логгера
 func Initialize(level string) error {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
@@ -40,6 +42,7 @@ func Initialize(level string) error {
 	return nil
 }
 
+// RequestLogger логирование запросов
 func RequestLogger() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -71,6 +74,7 @@ func RequestLogger() func(http.Handler) http.Handler {
 	}
 }
 
+// Write записывает данные
 func (r loggerResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
@@ -78,6 +82,7 @@ func (r loggerResponseWriter) Write(b []byte) (int, error) {
 	return size, err
 }
 
+// WriteHeader устанавливает заголовок
 func (r loggerResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode

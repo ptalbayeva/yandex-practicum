@@ -11,7 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "net/http/pprof"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -21,6 +24,7 @@ import (
 	g "github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
+	"github.com/yandex-practicum/shorten-url/pkg/audit"
 	"go.uber.org/zap"
 )
 
@@ -40,6 +44,14 @@ func run() error {
 		return err
 	}
 
+	auditService, err := initAudit(c)
+
+	if err != nil {
+		return err
+	}
+
+	auditService.Start()
+
 	db, err := sql.Open("pgx", c.DatabaseDSN)
 	if err != nil {
 		return err
@@ -58,13 +70,14 @@ func run() error {
 	go deleteURLService.Run(ctx)
 
 	shortenerService := service.NewShortenerService(repo, c.BaseURL, *deleteURLService)
-	urlHandler := handler.NewHandler(shortenerService, db)
+	urlHandler := handler.NewHandler(shortenerService, db, auditService)
 
 	r := chi.NewRouter()
 	r.Use(g.RequestLogger())
 	r.Use(g.GzipMiddleware)
 	r.Use(g.Auth([]byte(c.AuthKey)))
 
+	r.Mount("/debug", middleware.Profiler())
 	r.Post("/", urlHandler.Shorten)
 	r.Get("/{id}", urlHandler.Redirect)
 	r.Get("/api/user/urls", urlHandler.GetURLS)
@@ -94,6 +107,25 @@ func run() error {
 	}
 
 	return nil
+}
+
+func initAudit(config *config.Config) (audit.Publisher, error) {
+	svc := audit.NewPublisherService(100)
+
+	if config.AuditFile != "" {
+		fileObserver, err := audit.NewFileObserver(config.AuditFile)
+		if err != nil {
+			return nil, err
+		}
+		svc.Subscribe(fileObserver)
+	}
+
+	if config.AuditURL != "" {
+		httpObserver := audit.NewAPIObserver(config.AuditURL)
+		svc.Subscribe(httpObserver)
+	}
+
+	return svc, nil
 }
 
 func initRepository(cfg config.Config) (repository.URLRepository, func(), error) {

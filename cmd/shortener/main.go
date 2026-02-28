@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,7 +29,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		g.Log.Fatal("Ошибка на сервере", zap.Error(err))
+		g.Log.Error("Ошибка на сервере", zap.Error(err))
 	}
 }
 
@@ -93,7 +92,9 @@ func run() error {
 
 	go func() {
 		if fail := server.ListenAndServe(); fail != nil && !errors.Is(fail, http.ErrServerClosed) {
-			log.Fatalf("server listen error: %v", fail)
+			fmt.Errorf("error while starting server %w", fail)
+
+			return
 		}
 	}()
 
@@ -103,7 +104,7 @@ func run() error {
 	<-s
 
 	if fail := server.Shutdown(context.Background()); fail != nil {
-		log.Fatalf("server shutdown error: %v", fail)
+		fmt.Errorf("server shutdown error: %w", fail)
 	}
 
 	return nil

@@ -92,7 +92,7 @@ func run() error {
 
 	go func() {
 		if fail := server.ListenAndServe(); fail != nil && !errors.Is(fail, http.ErrServerClosed) {
-			fmt.Errorf("error while starting server %w", fail)
+			_ = fmt.Errorf("error while starting server %w", fail)
 
 			return
 		}
@@ -104,7 +104,7 @@ func run() error {
 	<-s
 
 	if fail := server.Shutdown(context.Background()); fail != nil {
-		fmt.Errorf("server shutdown error: %w", fail)
+		_ = fmt.Errorf("server shutdown error: %w", fail)
 	}
 
 	return nil

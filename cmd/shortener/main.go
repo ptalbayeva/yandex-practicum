@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,7 +28,19 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	BuildVersion string = "N/A"
+	BuildDate    string = "N/A"
+	BuildCommit  string = "N/A"
+)
+
 func main() {
+	// ИНформация build-а
+	log.Printf("Build version: %s\n", BuildVersion)
+	log.Printf("Build date:    %s\n", BuildDate)
+	log.Printf("Build commit:  %s\n", BuildCommit)
+	log.Println()
+
 	if err := run(); err != nil {
 		g.Log.Error("Ошибка на сервере", zap.Error(err))
 	}

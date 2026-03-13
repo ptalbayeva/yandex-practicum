@@ -80,7 +80,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 func reportForbidden(pass *analysis.Pass, sel *ast.SelectorExpr, pkgName, selName string) {
 	pass.Reportf(sel.Pos(),
-		"direct call to %s.%s() is prohibited (except inside main.main in package main)",
+		"direct call to %s.%s() is prohibited",
 		pkgName, selName)
 }
 

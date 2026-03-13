@@ -15,8 +15,8 @@ func TestLinterInMem(t *testing.T) {
 
 			func check() {
 				panic("stop")       // want "panic found"
-				os.Exit(1)          // want "direct call to os.Exit is prohibited"
-				log.Fatal("err")    // want "direct call to log.Fatal is prohibited"
+				os.Exit(1)          // want "direct call to os\\.Exit\\(\\) is prohibited"
+				log.Fatal("err")    // want "direct call to log\\.Fatal\\(\\) is prohibited"
 			}
 		`,
 		"main/main.go": `

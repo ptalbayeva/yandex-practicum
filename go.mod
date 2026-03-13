@@ -1,6 +1,6 @@
 module github.com/yandex-practicum/shorten-url
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/go-chi/chi/v5 v5.2.5
@@ -24,7 +24,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
 	golang.org/x/mod v0.34.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect

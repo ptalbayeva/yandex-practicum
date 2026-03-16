@@ -28,9 +28,21 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	BuildVersion string = "N/A"
+	BuildDate    string = "N/A"
+	BuildCommit  string = "N/A"
+)
+
 func main() {
+	// ИНформация build-а
+	log.Printf("Build version: %s\n", BuildVersion)
+	log.Printf("Build date:    %s\n", BuildDate)
+	log.Printf("Build commit:  %s\n", BuildCommit)
+	log.Println()
+
 	if err := run(); err != nil {
-		g.Log.Fatal("Ошибка на сервере", zap.Error(err))
+		g.Log.Error("Ошибка на сервере", zap.Error(err))
 	}
 }
 
@@ -93,7 +105,9 @@ func run() error {
 
 	go func() {
 		if fail := server.ListenAndServe(); fail != nil && !errors.Is(fail, http.ErrServerClosed) {
-			log.Fatalf("server listen error: %v", fail)
+			_ = fmt.Errorf("error while starting server %w", fail)
+
+			return
 		}
 	}()
 
@@ -103,7 +117,7 @@ func run() error {
 	<-s
 
 	if fail := server.Shutdown(context.Background()); fail != nil {
-		log.Fatalf("server shutdown error: %v", fail)
+		_ = fmt.Errorf("server shutdown error: %w", fail)
 	}
 
 	return nil

@@ -32,8 +32,6 @@ var (
 	BuildVersion string = "N/A"
 	BuildDate    string = "N/A"
 	BuildCommit  string = "N/A"
-	certFile            = "cert.pem"
-	keyFile             = "key.pem"
 )
 
 func main() {
@@ -107,12 +105,12 @@ func run() error {
 
 	go func() {
 		if c.EnableHttps {
-			if err = service.EnsureCertificates(certFile, keyFile); err != nil {
+			if err = service.EnsureCertificates(c.CertFile, c.KeyFile); err != nil {
 				_ = fmt.Errorf("error while generating certificates %w", err)
 			}
 
 			log.Printf("Запуск HTTPS на %s", c.Address)
-			err = http.ListenAndServeTLS(c.Address, certFile, keyFile, r)
+			err = http.ListenAndServeTLS(c.Address, c.CertFile, c.KeyFile, r)
 		} else {
 			log.Printf("Запуск HTTP на %s", c.Address)
 			err = http.ListenAndServe(c.Address, r)

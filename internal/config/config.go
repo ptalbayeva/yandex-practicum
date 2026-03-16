@@ -16,6 +16,8 @@ type Config struct {
 	AuditFile       string `env:"AUDIT_FILE" envDefault:"test.txt"`            // файл хранения аудита
 	AuditURL        string `env:"AUDIT_URL" envDefault:""`                     // полный URL удаленного сервера-приёмника
 	EnableHttps     bool   `env:"ENABLE_HTTPS" envDefault:"false"`             // включение HTTPS в веб-сервере
+	CertFile        string `env:"CERTFILE" envDefault:"cert.pem"`              // сертификат
+	KeyFile         string `env:"KEYFILE" envDefault:"key.pem"`                // ключ
 }
 
 // New создание конфигурации
@@ -29,6 +31,8 @@ func New() *Config {
 	flag.StringVar(&config.AuditFile, "audit-file", "", "Файл хранения аудита")
 	flag.StringVar(&config.AuditURL, "audit-url", "", "Полный URL удаленного сервера-приёмника")
 	flag.Bool("s", false, "Включить HTTPS")
+	flag.StringVar(&config.CertFile, "cert-file", "", "Файл хранения сертификата")
+	flag.StringVar(&config.KeyFile, "key-file", "", "Файл хранения ключа")
 
 	flag.Parse()
 

@@ -15,6 +15,7 @@ type Config struct {
 	AuthKey         string `env:"AUTH_KEY" envDefault:"secret_key"`            // секретный ключ для генерации токена
 	AuditFile       string `env:"AUDIT_FILE" envDefault:"test.txt"`            // файл хранения аудита
 	AuditURL        string `env:"AUDIT_URL" envDefault:""`                     // полный URL удаленного сервера-приёмника
+	EnableHttps     bool   `env:"ENABLE_HTTPS" envDefault:"false"`             // включение HTTPS в веб-сервере
 }
 
 // New создание конфигурации
@@ -27,6 +28,7 @@ func New() *Config {
 	flag.StringVar(&config.DatabaseDSN, "d", "", "Адрес БД")
 	flag.StringVar(&config.AuditFile, "audit-file", "", "Файл хранения аудита")
 	flag.StringVar(&config.AuditURL, "audit-url", "", "Полный URL удаленного сервера-приёмника")
+	flag.Bool("s", false, "Включить HTTPS")
 
 	flag.Parse()
 

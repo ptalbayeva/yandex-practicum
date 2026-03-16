@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_ "net/http/pprof"
 
@@ -110,10 +111,10 @@ func run() error {
 			}
 
 			log.Printf("Запуск HTTPS на %s", c.Address)
-			err = http.ListenAndServeTLS(c.Address, c.CertFile, c.KeyFile, r)
+			err = server.ListenAndServeTLS(c.CertFile, c.KeyFile)
 		} else {
 			log.Printf("Запуск HTTP на %s", c.Address)
-			err = http.ListenAndServe(c.Address, r)
+			err = server.ListenAndServe()
 		}
 
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -122,11 +123,14 @@ func run() error {
 	}()
 
 	s := make(chan os.Signal, 1)
-	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	<-s
 
-	if fail := server.Shutdown(context.Background()); fail != nil {
+	shutdownctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if fail := server.Shutdown(shutdownctx); fail != nil {
 		_ = fmt.Errorf("server shutdown error: %w", fail)
 	}
 

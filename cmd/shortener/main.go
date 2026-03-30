@@ -89,6 +89,7 @@ func run() error {
 	r.Use(g.RequestLogger())
 	r.Use(g.GzipMiddleware)
 	r.Use(g.Auth([]byte(c.AuthKey)))
+	r.Use(g.TrustedSubnetMiddleware(c))
 
 	r.Mount("/debug", middleware.Profiler())
 	r.Post("/", urlHandler.Shorten)
@@ -97,6 +98,7 @@ func run() error {
 	r.Post("/api/shorten", urlHandler.ShortenJSON)
 	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
 	r.Delete("/api/user/urls", urlHandler.DeleteUserURLs)
+	r.Get("/api/internal/stats", urlHandler.GetInternalStats)
 	r.Get("/ping", urlHandler.Ping)
 
 	server := &http.Server{
@@ -110,10 +112,10 @@ func run() error {
 				_ = fmt.Errorf("error while generating certificates %w", err)
 			}
 
-			log.Printf("Запуск HTTPS на %s", c.Address)
+			g.Log.Info("Запуск HTTPS на %s", zap.String("address", c.Address))
 			err = server.ListenAndServeTLS(c.CertFile, c.KeyFile)
 		} else {
-			log.Printf("Запуск HTTP на %s", c.Address)
+			g.Log.Info("Запуск HTTP на %s", zap.String("address", c.Address))
 			err = server.ListenAndServe()
 		}
 
@@ -122,10 +124,10 @@ func run() error {
 		}
 	}()
 
-	s := make(chan os.Signal, 1)
-	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	exitChannel := make(chan os.Signal, 1)
+	signal.Notify(exitChannel, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	<-s
+	<-exitChannel
 
 	shutdownctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

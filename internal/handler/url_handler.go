@@ -252,6 +252,25 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// GetInternalStats получение внутренней статистики сервиса
+func (h *Handler) GetInternalStats(w http.ResponseWriter, r *http.Request) {
+	urlsCount, err := h.shortener.GetTotalURLs(r.Context())
+	usersCount, err := h.shortener.GetTotalUsers(r.Context())
+
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	response := model.StatsResponse{
+		URLs:  urlsCount,
+		Users: usersCount,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

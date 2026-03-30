@@ -152,3 +152,25 @@ func (r *DBRepository) DeleteManyByCodes(userID string, codes []string) error {
 	_, err := r.db.ExecContext(ctx, query, userID, pq.Array(codes))
 	return err
 }
+
+// FindTotalURLs поиск всех сокращенных урлов
+func (r *DBRepository) FindTotalURLs(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM shorten_urls").Scan(&count)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to count urls: %w", err)
+	}
+	return count, nil
+}
+
+// FindTotalUserIDs поиск всех пользователей
+func (r *DBRepository) FindTotalUserIDs(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(DISTINCT user_id) FROM shorten_urls").Scan(&count)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to count users: %w", err)
+	}
+	return count, nil
+}

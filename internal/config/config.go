@@ -20,11 +20,26 @@ type Config struct {
 	EnableHttps     bool   `env:"ENABLE_HTTPS" envDefault:"false" json:"enable_https"` // включение HTTPS в веб-сервере
 	CertFile        string `env:"CERTFILE" envDefault:"cert.pem" json:"cert_file"`     // сертификат
 	KeyFile         string `env:"KEYFILE" envDefault:"key.pem" json:"key_file"`        // ключ
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`                // CIDR
 }
 
 // New создание конфигурации
 func New() *Config {
-	config := &Config{}
+	config := Config{
+		Address:         ":8080",
+		BaseURL:         "http://localhost:8080",
+		LogLevel:        "info",
+		FileStoragePath: "",
+		DatabaseDSN:     "",
+		AuthKey:         "secret_key",
+		AuditFile:       "",
+		AuditURL:        "",
+		EnableHttps:     false,
+		CertFile:        "cert.pem",
+		KeyFile:         "key.pem",
+		TrustedSubnet:   "",
+	}
+
 	var configPath string
 
 	flag.StringVar(&config.Address, "a", ":8080", "Адрес запуска HTTP сервера")
@@ -36,6 +51,7 @@ func New() *Config {
 	flag.Bool("s", false, "Включить HTTPS")
 	flag.StringVar(&config.CertFile, "cert-file", "", "Файл хранения сертификата")
 	flag.StringVar(&config.KeyFile, "key-file", "", "Файл хранения ключа")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "Путь к JSON конфигу")
 	flag.StringVar(&configPath, "c", os.Getenv("CONFIG"), "Путь к JSON конфигу")
 
 	flag.Parse()
@@ -73,5 +89,5 @@ func New() *Config {
 		}
 	}
 
-	return config
+	return &config
 }

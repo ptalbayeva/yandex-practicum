@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"github.com/yandex-practicum/shorten-url/internal/model"
@@ -16,4 +17,6 @@ type URLRepository interface {
 	SaveMany(u []*model.URL) error
 	FindManyByUserID(userID string) ([]*model.URL, error)
 	DeleteManyByCodes(userID string, codes []string) error
+	FindTotalURLs(ctx context.Context) (int, error)
+	FindTotalUserIDs(ctx context.Context) (int, error)
 }

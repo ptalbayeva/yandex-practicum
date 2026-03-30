@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
@@ -143,6 +144,26 @@ func (s *ShortenerService) DeleteUserURLs(userID string, codes []string) error {
 	}
 
 	return nil
+}
+
+// GetTotalURLs получение всех сокращенных урл-ов
+func (s *ShortenerService) GetTotalURLs(ctx context.Context) (int, error) {
+	totalCount, err := s.repo.FindTotalURLs(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return totalCount, nil
+}
+
+// GetTotalUsers получение всех пользователей
+func (s *ShortenerService) GetTotalUsers(ctx context.Context) (int, error) {
+	totalCount, err := s.repo.FindTotalUserIDs(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return totalCount, nil
 }
 
 // HashURL хэширвоание url

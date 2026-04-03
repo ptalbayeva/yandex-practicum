@@ -43,9 +43,9 @@ func Example() {
 		auditService: audit.NewNoopPublisher(),
 	}
 
-	r.Post("/api/shorten", urlHandler.ShortenJSON)
-	r.Get("/{id}", urlHandler.Redirect)
-	r.Get("/api/user/urls", urlHandler.GetURLS)
+	r.Post("/api/shorten", urlHandler.ShortenURL)
+	r.Get("/{id}", urlHandler.ExpandURL)
+	r.Get("/api/user/urls", urlHandler.ListUserURLs)
 
 	// 2. Создаем тестовый сервер
 	ts := httptest.NewServer(r)

@@ -63,7 +63,7 @@ func New() *Config {
 		if err == nil {
 			defer file.Close()
 			decoder := json.NewDecoder(file)
-			if err = decoder.Decode(config); err != nil {
+			if err = decoder.Decode(&config); err != nil {
 				log.Printf("error while parsing config file: %v", err)
 			}
 		}

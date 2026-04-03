@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,7 +27,10 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 	"github.com/yandex-practicum/shorten-url/pkg/audit"
+	"github.com/yandex-practicum/shorten-url/pkg/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -89,17 +93,38 @@ func run() error {
 	r.Use(g.RequestLogger())
 	r.Use(g.GzipMiddleware)
 	r.Use(g.Auth([]byte(c.AuthKey)))
-	r.Use(g.TrustedSubnetMiddleware(c))
 
 	r.Mount("/debug", middleware.Profiler())
 	r.Post("/", urlHandler.Shorten)
-	r.Get("/{id}", urlHandler.Redirect)
-	r.Get("/api/user/urls", urlHandler.GetURLS)
-	r.Post("/api/shorten", urlHandler.ShortenJSON)
+	r.Get("/{id}", urlHandler.ExpandURL)
+	r.Get("/api/user/urls", urlHandler.ListUserURLs)
+	r.Post("/api/shorten", urlHandler.ShortenURL)
 	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
 	r.Delete("/api/user/urls", urlHandler.DeleteUserURLs)
-	r.Get("/api/internal/stats", urlHandler.GetInternalStats)
+	r.Route("/api/internal", func(r chi.Router) {
+		r.Use(g.TrustedSubnetMiddleware(c))
+		r.Get("/stats", urlHandler.GetInternalStats)
+	})
 	r.Get("/ping", urlHandler.Ping)
+
+	grpcListen, err := net.Listen("tcp", c.GRPCAddr)
+	if err != nil {
+		g.Log.Fatal("failed to listen gRPC", zap.Error(err))
+	}
+
+	authInterceptor := g.AuthGRPCInterceptor([]byte(c.AuthKey))
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(authInterceptor))
+	shortenerServer := service.NewShortenerServer(shortenerService)
+	proto.RegisterShortenerServiceServer(grpcServer, shortenerServer)
+	reflection.Register(grpcServer)
+
+	go func() {
+		g.Log.Info("Запуск gRPC на %s", zap.String("address", c.GRPCAddr))
+
+		if err = grpcServer.Serve(grpcListen); err != nil {
+			g.Log.Error("gRPC server failed", zap.Error(err))
+		}
+	}()
 
 	server := &http.Server{
 		Addr:    c.Address,

@@ -93,8 +93,8 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ShortenJSON сокращение url-a при передачи json
-func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
+// ShortenURL сокращение url-a при передачи json
+func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	h.validateJSONMethod(w, r)
 
 	var request model.Request
@@ -159,8 +159,8 @@ func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Redirect редирект на оригинальную ссылку
-func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
+// ExpandURL редирект на оригинальную ссылку
+func (h *Handler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "id")
 
 	u, err := h.shortener.Resolve(code)
@@ -185,8 +185,8 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
 }
 
-// GetURLS получение всех сокращенных url по пользователю
-func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
+// ListUserURLs получение всех сокращенных url по пользователю
+func (h *Handler) ListUserURLs(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	if userID == "" {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)

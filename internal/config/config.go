@@ -10,6 +10,7 @@ import (
 // Config объект конфига
 type Config struct {
 	Address         string `env:"SERVER_ADDRESS" envDefault:":8080" json:"address"`    // адрес запуска HTTP сервера
+	GRPCAddr        string `env:"GRPC_ADDRESS" envDefault:":3200" json:"grpc_addr"`    // адрес запуска gRPC HTTP сервера
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`         // базовый URL
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`                         // уровень лога
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`            // путь до файла хранения сокращенных URL
@@ -27,6 +28,7 @@ type Config struct {
 func New() *Config {
 	config := Config{
 		Address:         ":8080",
+		GRPCAddr:        ":3200",
 		BaseURL:         "http://localhost:8080",
 		LogLevel:        "info",
 		FileStoragePath: "",

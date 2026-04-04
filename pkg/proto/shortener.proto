@@ -2,41 +2,40 @@ syntax = "proto3";
 
 package proto;
 
-// Путь, по которому будет сгенерирован пакет в Go
 option go_package = "github.com/yandex-practicum/shorten-url/pkg/proto";
 
-import "google/protobuf/empty.proto";
-
 service ShortenerService {
-// POST /api/shorten
-rpc ShortenURL (URLShortenRequest) returns (URLShortenResponse);
+  // POST /api/shorten
+  rpc ShortenURL (URLShortenRequest) returns (URLShortenResponse);
 
-// GET /<id>
-rpc ExpandURL (URLExpandRequest) returns (URLExpandResponse);
+  // GET /<id>
+  rpc ExpandURL (URLExpandRequest) returns (URLExpandResponse);
 
-// GET /api/user/urls
-rpc ListUserURLs (google.protobuf.Empty) returns (UserURLsResponse);
+  // GET /api/user/urls
+  rpc ListUserURLs (ListUserURLsRequest) returns (UserURLsResponse);
 }
 
 message URLShortenRequest {
-string url = 1;
+  string url = 1;
 }
 
 message URLShortenResponse {
-string result = 1;
+  string result = 1;
 }
 
 message URLExpandRequest {
-string id = 1;
+  string id = 1;
 }
 
 message URLExpandResponse {
-string result = 1;
+  string result = 1;
 }
 
+message ListUserURLsRequest {}
+
 message URLData {
-string short_url = 1;
-string original_url = 2;
+  string short_url = 1;
+  string original_url = 2;
 }
 
 message UserURLsResponse {

@@ -9,7 +9,6 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -198,6 +197,42 @@ func (x *URLExpandResponse) GetResult() string {
 	return ""
 }
 
+type ListUserURLsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUserURLsRequest) Reset() {
+	*x = ListUserURLsRequest{}
+	mi := &file_shortener_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserURLsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserURLsRequest) ProtoMessage() {}
+
+func (x *ListUserURLsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_shortener_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserURLsRequest.ProtoReflect.Descriptor instead.
+func (*ListUserURLsRequest) Descriptor() ([]byte, []int) {
+	return file_shortener_proto_rawDescGZIP(), []int{4}
+}
+
 type URLData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ShortUrl      string                 `protobuf:"bytes,1,opt,name=short_url,json=shortUrl,proto3" json:"short_url,omitempty"`
@@ -208,7 +243,7 @@ type URLData struct {
 
 func (x *URLData) Reset() {
 	*x = URLData{}
-	mi := &file_shortener_proto_msgTypes[4]
+	mi := &file_shortener_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -220,7 +255,7 @@ func (x *URLData) String() string {
 func (*URLData) ProtoMessage() {}
 
 func (x *URLData) ProtoReflect() protoreflect.Message {
-	mi := &file_shortener_proto_msgTypes[4]
+	mi := &file_shortener_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,7 +268,7 @@ func (x *URLData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use URLData.ProtoReflect.Descriptor instead.
 func (*URLData) Descriptor() ([]byte, []int) {
-	return file_shortener_proto_rawDescGZIP(), []int{4}
+	return file_shortener_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *URLData) GetShortUrl() string {
@@ -252,14 +287,14 @@ func (x *URLData) GetOriginalUrl() string {
 
 type UserURLsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Url           []*URLData             `protobuf:"bytes,1,rep,name=url,proto3" json:"url,omitempty"`
+	Urls          []*URLData             `protobuf:"bytes,1,rep,name=urls,proto3" json:"urls,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserURLsResponse) Reset() {
 	*x = UserURLsResponse{}
-	mi := &file_shortener_proto_msgTypes[5]
+	mi := &file_shortener_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -271,7 +306,7 @@ func (x *UserURLsResponse) String() string {
 func (*UserURLsResponse) ProtoMessage() {}
 
 func (x *UserURLsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_shortener_proto_msgTypes[5]
+	mi := &file_shortener_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -284,12 +319,12 @@ func (x *UserURLsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserURLsResponse.ProtoReflect.Descriptor instead.
 func (*UserURLsResponse) Descriptor() ([]byte, []int) {
-	return file_shortener_proto_rawDescGZIP(), []int{5}
+	return file_shortener_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *UserURLsResponse) GetUrl() []*URLData {
+func (x *UserURLsResponse) GetUrls() []*URLData {
 	if x != nil {
-		return x.Url
+		return x.Urls
 	}
 	return nil
 }
@@ -298,7 +333,7 @@ var File_shortener_proto protoreflect.FileDescriptor
 
 const file_shortener_proto_rawDesc = "" +
 	"\n" +
-	"\x0fshortener.proto\x12\x05proto\x1a\x1bgoogle/protobuf/empty.proto\"%\n" +
+	"\x0fshortener.proto\x12\x05proto\"%\n" +
 	"\x11URLShortenRequest\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\",\n" +
 	"\x12URLShortenResponse\x12\x16\n" +
@@ -306,17 +341,18 @@ const file_shortener_proto_rawDesc = "" +
 	"\x10URLExpandRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"+\n" +
 	"\x11URLExpandResponse\x12\x16\n" +
-	"\x06result\x18\x01 \x01(\tR\x06result\"I\n" +
+	"\x06result\x18\x01 \x01(\tR\x06result\"\x15\n" +
+	"\x13ListUserURLsRequest\"I\n" +
 	"\aURLData\x12\x1b\n" +
 	"\tshort_url\x18\x01 \x01(\tR\bshortUrl\x12!\n" +
-	"\foriginal_url\x18\x02 \x01(\tR\voriginalUrl\"4\n" +
-	"\x10UserURLsResponse\x12 \n" +
-	"\x03url\x18\x01 \x03(\v2\x0e.proto.URLDataR\x03url2\xd6\x01\n" +
+	"\foriginal_url\x18\x02 \x01(\tR\voriginalUrl\"6\n" +
+	"\x10UserURLsResponse\x12\"\n" +
+	"\x04urls\x18\x01 \x03(\v2\x0e.proto.URLDataR\x04urls2\xda\x01\n" +
 	"\x10ShortenerService\x12A\n" +
 	"\n" +
 	"ShortenURL\x12\x18.proto.URLShortenRequest\x1a\x19.proto.URLShortenResponse\x12>\n" +
-	"\tExpandURL\x12\x17.proto.URLExpandRequest\x1a\x18.proto.URLExpandResponse\x12?\n" +
-	"\fListUserURLs\x12\x16.google.protobuf.Empty\x1a\x17.proto.UserURLsResponseB3Z1github.com/yandex-practicum/shorten-url/pkg/protob\x06proto3"
+	"\tExpandURL\x12\x17.proto.URLExpandRequest\x1a\x18.proto.URLExpandResponse\x12C\n" +
+	"\fListUserURLs\x12\x1a.proto.ListUserURLsRequest\x1a\x17.proto.UserURLsResponseB3Z1github.com/yandex-practicum/shorten-url/pkg/protob\x06proto3"
 
 var (
 	file_shortener_proto_rawDescOnce sync.Once
@@ -330,24 +366,24 @@ func file_shortener_proto_rawDescGZIP() []byte {
 	return file_shortener_proto_rawDescData
 }
 
-var file_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_shortener_proto_goTypes = []any{
-	(*URLShortenRequest)(nil),  // 0: proto.URLShortenRequest
-	(*URLShortenResponse)(nil), // 1: proto.URLShortenResponse
-	(*URLExpandRequest)(nil),   // 2: proto.URLExpandRequest
-	(*URLExpandResponse)(nil),  // 3: proto.URLExpandResponse
-	(*URLData)(nil),            // 4: proto.URLData
-	(*UserURLsResponse)(nil),   // 5: proto.UserURLsResponse
-	(*emptypb.Empty)(nil),      // 6: google.protobuf.Empty
+	(*URLShortenRequest)(nil),   // 0: proto.URLShortenRequest
+	(*URLShortenResponse)(nil),  // 1: proto.URLShortenResponse
+	(*URLExpandRequest)(nil),    // 2: proto.URLExpandRequest
+	(*URLExpandResponse)(nil),   // 3: proto.URLExpandResponse
+	(*ListUserURLsRequest)(nil), // 4: proto.ListUserURLsRequest
+	(*URLData)(nil),             // 5: proto.URLData
+	(*UserURLsResponse)(nil),    // 6: proto.UserURLsResponse
 }
 var file_shortener_proto_depIdxs = []int32{
-	4, // 0: proto.UserURLsResponse.url:type_name -> proto.URLData
+	5, // 0: proto.UserURLsResponse.urls:type_name -> proto.URLData
 	0, // 1: proto.ShortenerService.ShortenURL:input_type -> proto.URLShortenRequest
 	2, // 2: proto.ShortenerService.ExpandURL:input_type -> proto.URLExpandRequest
-	6, // 3: proto.ShortenerService.ListUserURLs:input_type -> google.protobuf.Empty
+	4, // 3: proto.ShortenerService.ListUserURLs:input_type -> proto.ListUserURLsRequest
 	1, // 4: proto.ShortenerService.ShortenURL:output_type -> proto.URLShortenResponse
 	3, // 5: proto.ShortenerService.ExpandURL:output_type -> proto.URLExpandResponse
-	5, // 6: proto.ShortenerService.ListUserURLs:output_type -> proto.UserURLsResponse
+	6, // 6: proto.ShortenerService.ListUserURLs:output_type -> proto.UserURLsResponse
 	4, // [4:7] is the sub-list for method output_type
 	1, // [1:4] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -366,7 +402,7 @@ func file_shortener_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_shortener_proto_rawDesc), len(file_shortener_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

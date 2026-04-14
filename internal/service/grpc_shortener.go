@@ -27,43 +27,42 @@ func (s *ShortenerServer) ShortenURL(ctx context.Context, req *proto.URLShortenR
 
 	u, err := s.svc.Shorten(req.GetUrl(), userID)
 
+	shortURL, joinErr := url.JoinPath(s.svc.BaseURL, u.Code)
+	if joinErr != nil {
+		g.Log.Error("path error", zap.Error(joinErr))
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
 	if errors.Is(err, repository.ErrConflict) {
-		result, _ := url.JoinPath(s.svc.BaseURL, u.Code)
 		return &proto.URLShortenResponse{
-			Result: result,
-		}, status.Error(codes.AlreadyExists, "URL already exists")
+			Id:       u.Code,
+			ShortUrl: shortURL,
+		}, status.Error(codes.AlreadyExists, "already exists")
 	}
 
 	if err != nil {
 		g.Log.Error("shorten error", zap.Error(err))
-
-		return nil, status.Errorf(codes.Internal, "shorten error: %v", err)
-	}
-
-	result, err := url.JoinPath(s.svc.BaseURL, u.Code)
-	if err != nil {
-		g.Log.Error("internal path error", zap.Error(err))
-
-		return nil, status.Errorf(codes.Internal, "internal path error")
+		return nil, status.Error(codes.Internal, "internal error")
 	}
 
 	return &proto.URLShortenResponse{
-		Result: result,
+		Id:       u.Code,
+		ShortUrl: shortURL,
 	}, nil
 }
 
 func (s *ShortenerServer) ExpandURL(ctx context.Context, req *proto.URLExpandRequest) (*proto.URLExpandResponse, error) {
 	u, err := s.svc.Resolve(req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "not found: %v", err)
+		return nil, status.Error(codes.NotFound, "not found")
 	}
 
 	if u.IsDeleted {
-		return nil, status.Error(codes.FailedPrecondition, "URL was deleted")
+		return nil, status.Error(codes.FailedPrecondition, "deleted")
 	}
 
 	return &proto.URLExpandResponse{
-		Result: u.Original,
+		Url: u.Original,
 	}, nil
 }
 
@@ -73,19 +72,24 @@ func (s *ShortenerServer) ListUserURLs(ctx context.Context, req *proto.ListUserU
 	urls, err := s.svc.GetManyByUserID(userID)
 	if err != nil {
 		g.Log.Error("fetch error", zap.Error(err))
-
-		return nil, status.Errorf(codes.Internal, "fetch error: %v", err)
+		return nil, status.Error(codes.Internal, "internal error")
 	}
 
 	if len(urls) == 0 {
 		return nil, status.Error(codes.NotFound, "no content")
 	}
 
-	items := make([]*proto.URLData, 0, len(urls))
+	items := make([]*proto.URLRef, 0, len(urls))
 	for _, val := range urls {
-		items = append(items, &proto.URLData{
-			ShortUrl:    val.ShortenURL,
-			OriginalUrl: val.OriginalURL,
+		shortURL, err := url.JoinPath(s.svc.BaseURL, val.ShortenURL)
+		if err != nil {
+			g.Log.Error("path error", zap.Error(err))
+			continue
+		}
+
+		items = append(items, &proto.URLRef{
+			Id:       val.ShortenURL,
+			ShortUrl: shortURL,
 		})
 	}
 

@@ -28,11 +28,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ShortenerServiceClient interface {
-	// POST /api/shorten
 	ShortenURL(ctx context.Context, in *URLShortenRequest, opts ...grpc.CallOption) (*URLShortenResponse, error)
-	// GET /<id>
 	ExpandURL(ctx context.Context, in *URLExpandRequest, opts ...grpc.CallOption) (*URLExpandResponse, error)
-	// GET /api/user/urls
 	ListUserURLs(ctx context.Context, in *ListUserURLsRequest, opts ...grpc.CallOption) (*UserURLsResponse, error)
 }
 
@@ -78,11 +75,8 @@ func (c *shortenerServiceClient) ListUserURLs(ctx context.Context, in *ListUserU
 // All implementations must embed UnimplementedShortenerServiceServer
 // for forward compatibility.
 type ShortenerServiceServer interface {
-	// POST /api/shorten
 	ShortenURL(context.Context, *URLShortenRequest) (*URLShortenResponse, error)
-	// GET /<id>
 	ExpandURL(context.Context, *URLExpandRequest) (*URLExpandResponse, error)
-	// GET /api/user/urls
 	ListUserURLs(context.Context, *ListUserURLsRequest) (*UserURLsResponse, error)
 	mustEmbedUnimplementedShortenerServiceServer()
 }

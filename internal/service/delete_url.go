@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
-	"log"
 	"time"
 
+	g "github.com/yandex-practicum/shorten-url/internal/middleware"
 	"github.com/yandex-practicum/shorten-url/internal/model"
 	"github.com/yandex-practicum/shorten-url/internal/repository"
+	"go.uber.org/zap"
 )
 
 // DeleteURLService сервис для удаления url
@@ -43,7 +44,7 @@ func (w *DeleteURLService) Run(ctx context.Context) {
 	flush := func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Println("panic in delete:", r)
+				g.Log.Error("panic in delete:", zap.Any("recover return", r))
 			}
 		}()
 
@@ -58,7 +59,7 @@ func (w *DeleteURLService) Run(ctx context.Context) {
 
 		for userID, codes := range grouped {
 			if err := w.repository.DeleteManyByCodes(userID, codes); err != nil {
-				log.Println("could not delete user URLs:", err)
+				g.Log.Error("could not delete user URLs:", zap.Error(err))
 			}
 		}
 

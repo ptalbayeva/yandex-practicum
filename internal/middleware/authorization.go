@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type contextKey string
@@ -48,7 +49,9 @@ func Auth(key []byte) func(http.Handler) http.Handler {
 
 			token, err := createToken(userID, key)
 			if err != nil {
-				http.Error(w, "could not create token", http.StatusInternalServerError)
+				Log.Error("could not create token", zap.Error(err))
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
 				return
 			}
 

@@ -11,10 +11,6 @@ import (
 func TrustedSubnetMiddleware(cfg *config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if cfg.TrustedSubnet == "" {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
 
 			realIP := r.Header.Get("X-Real-IP")
 			ip := net.ParseIP(realIP)

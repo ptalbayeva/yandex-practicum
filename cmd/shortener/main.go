@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"net"
 	"net/http"
-	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,7 +26,10 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 	"github.com/yandex-practicum/shorten-url/pkg/audit"
+	"github.com/yandex-practicum/shorten-url/pkg/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -37,10 +40,11 @@ var (
 
 func main() {
 	// ИНформация build-а
-	log.Printf("Build version: %s\n", BuildVersion)
-	log.Printf("Build date:    %s\n", BuildDate)
-	log.Printf("Build commit:  %s\n", BuildCommit)
-	log.Println()
+	g.Log.Info("Build info: ",
+		zap.String("Build version", BuildVersion),
+		zap.String("Build date", BuildDate),
+		zap.String("Commit SHA", BuildCommit),
+	)
 
 	if err := run(); err != nil {
 		g.Log.Error("Ошибка на сервере", zap.Error(err))
@@ -89,29 +93,57 @@ func run() error {
 	r.Use(g.RequestLogger())
 	r.Use(g.GzipMiddleware)
 	r.Use(g.Auth([]byte(c.AuthKey)))
-	r.Use(g.TrustedSubnetMiddleware(c))
+
+	if c.TrustedSubnet != "" {
+		r.Use(g.TrustedSubnetMiddleware(c))
+	}
 
 	r.Mount("/debug", middleware.Profiler())
 	r.Post("/", urlHandler.Shorten)
-	r.Get("/{id}", urlHandler.Redirect)
-	r.Get("/api/user/urls", urlHandler.GetURLS)
-	r.Post("/api/shorten", urlHandler.ShortenJSON)
+	r.Get("/{id}", urlHandler.ExpandURL)
+	r.Get("/api/user/urls", urlHandler.ListUserURLs)
+	r.Post("/api/shorten", urlHandler.ShortenURL)
 	r.Post("/api/shorten/batch", urlHandler.BatchShorten)
 	r.Delete("/api/user/urls", urlHandler.DeleteUserURLs)
 	r.Get("/api/internal/stats", urlHandler.GetInternalStats)
 	r.Get("/ping", urlHandler.Ping)
+
+	grpcListen, err := net.Listen("tcp", c.GRPCAddr)
+	if err != nil {
+		g.Log.Fatal("failed to listen gRPC", zap.Error(err))
+	}
+
+	authInterceptor := g.AuthGRPCInterceptor([]byte(c.AuthKey))
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(authInterceptor))
+	shortenerServer := service.NewShortenerServer(shortenerService)
+	proto.RegisterShortenerServiceServer(grpcServer, shortenerServer)
+	reflection.Register(grpcServer)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		g.Log.Info("Запуск gRPC на %s", zap.String("address", c.GRPCAddr))
+
+		if err = grpcServer.Serve(grpcListen); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			g.Log.Error("gRPC server failed", zap.Error(err))
+		}
+	}()
 
 	server := &http.Server{
 		Addr:    c.Address,
 		Handler: r,
 	}
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+		var err error
 		if c.EnableHttps {
-			if err = service.EnsureCertificates(c.CertFile, c.KeyFile); err != nil {
-				_ = fmt.Errorf("error while generating certificates %w", err)
-			}
-
 			g.Log.Info("Запуск HTTPS на %s", zap.String("address", c.Address))
 			err = server.ListenAndServeTLS(c.CertFile, c.KeyFile)
 		} else {
@@ -120,21 +152,25 @@ func run() error {
 		}
 
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			_ = fmt.Errorf("error while starting server %w", err)
+			g.Log.Error("HTTP server error", zap.Error(err))
 		}
 	}()
 
-	exitChannel := make(chan os.Signal, 1)
-	signal.Notify(exitChannel, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-ctx.Done()
+	g.Log.Info("Получен сигнал завершения, начинаем shutdown...")
 
-	<-exitChannel
-
-	shutdownctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if fail := server.Shutdown(shutdownctx); fail != nil {
-		_ = fmt.Errorf("server shutdown error: %w", fail)
-	}
+	go func() {
+		if err = server.Shutdown(shutdownCtx); err != nil {
+			g.Log.Error("HTTP shutdown error", zap.Error(err))
+		}
+		grpcServer.GracefulStop()
+	}()
+
+	wg.Wait()
+	g.Log.Info("Все сервисы успешно остановлены")
 
 	return nil
 }

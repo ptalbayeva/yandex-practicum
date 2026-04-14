@@ -2,9 +2,12 @@ package repository
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/yandex-practicum/shorten-url/internal/model"
@@ -13,6 +16,7 @@ import (
 // FileRepository репозиторий для работы с файловой системой
 type FileRepository struct {
 	fileStoragePath string
+	mu              sync.RWMutex
 	data            []*model.URL
 }
 
@@ -188,4 +192,55 @@ func (f *FileRepository) DeleteManyByCodes(userID string, codes []string) error 
 	}
 
 	return f.SaveMany(f.data)
+}
+
+// FindTotalURLs поиск всех сокращенных урлов
+func (f *FileRepository) FindTotalURLs(ctx context.Context) (int, error) {
+	file, err := os.Open(f.fileStoragePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	var count int
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+			count++
+		}
+	}
+
+	return count, scanner.Err()
+}
+
+// FindTotalUserIDs поиск всех пользователей
+func (f *FileRepository) FindTotalUserIDs(ctx context.Context) (int, error) {
+	file, err := os.Open(f.fileStoragePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	uniqueUsers := make(map[string]struct{})
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+			var record model.URL
+			if err = json.Unmarshal(scanner.Bytes(), &record); err != nil {
+				continue
+			}
+			if record.UserID != "" {
+				uniqueUsers[record.UserID] = struct{}{}
+			}
+		}
+	}
+
+	return len(uniqueUsers), scanner.Err()
 }

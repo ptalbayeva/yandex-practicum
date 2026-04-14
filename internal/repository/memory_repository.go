@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"sync"
@@ -78,4 +79,24 @@ func (r *MemoryRepo) DeleteManyByCodes(userID string, codes []string) error {
 	}
 
 	return nil
+}
+
+// FindTotalURLs поиск всех сокращенных урлов
+func (r *MemoryRepo) FindTotalURLs(ctx context.Context) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.data), nil
+}
+
+// FindTotalUserIDs поиск всех пользователей
+func (r *MemoryRepo) FindTotalUserIDs(ctx context.Context) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	users := make(map[string]struct{})
+
+	for _, url := range r.data {
+		users[url.UserID] = struct{}{}
+	}
+	return len(users), nil
 }

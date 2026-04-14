@@ -10,6 +10,7 @@ import (
 // Config объект конфига
 type Config struct {
 	Address         string `env:"SERVER_ADDRESS" envDefault:":8080" json:"address"`    // адрес запуска HTTP сервера
+	GRPCAddr        string `env:"GRPC_ADDRESS" envDefault:":3200" json:"grpc_addr"`    // адрес запуска gRPC HTTP сервера
 	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`         // базовый URL
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"info"`                         // уровень лога
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"./storage"`            // путь до файла хранения сокращенных URL
@@ -20,11 +21,27 @@ type Config struct {
 	EnableHttps     bool   `env:"ENABLE_HTTPS" envDefault:"false" json:"enable_https"` // включение HTTPS в веб-сервере
 	CertFile        string `env:"CERTFILE" envDefault:"cert.pem" json:"cert_file"`     // сертификат
 	KeyFile         string `env:"KEYFILE" envDefault:"key.pem" json:"key_file"`        // ключ
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`                // CIDR
 }
 
 // New создание конфигурации
 func New() *Config {
-	config := &Config{}
+	config := Config{
+		Address:         ":8080",
+		GRPCAddr:        ":3200",
+		BaseURL:         "http://localhost:8080",
+		LogLevel:        "info",
+		FileStoragePath: "",
+		DatabaseDSN:     "",
+		AuthKey:         "secret_key",
+		AuditFile:       "",
+		AuditURL:        "",
+		EnableHttps:     false,
+		CertFile:        "cert.pem",
+		KeyFile:         "key.pem",
+		TrustedSubnet:   "",
+	}
+
 	var configPath string
 
 	flag.StringVar(&config.Address, "a", ":8080", "Адрес запуска HTTP сервера")
@@ -36,6 +53,7 @@ func New() *Config {
 	flag.Bool("s", false, "Включить HTTPS")
 	flag.StringVar(&config.CertFile, "cert-file", "", "Файл хранения сертификата")
 	flag.StringVar(&config.KeyFile, "key-file", "", "Файл хранения ключа")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "Путь к JSON конфигу")
 	flag.StringVar(&configPath, "c", os.Getenv("CONFIG"), "Путь к JSON конфигу")
 
 	flag.Parse()
@@ -45,7 +63,7 @@ func New() *Config {
 		if err == nil {
 			defer file.Close()
 			decoder := json.NewDecoder(file)
-			if err = decoder.Decode(config); err != nil {
+			if err = decoder.Decode(&config); err != nil {
 				log.Printf("error while parsing config file: %v", err)
 			}
 		}
@@ -73,5 +91,5 @@ func New() *Config {
 		}
 	}
 
-	return config
+	return &config
 }

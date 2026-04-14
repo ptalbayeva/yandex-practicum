@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/yandex-practicum/shorten-url/internal/repository"
 	"github.com/yandex-practicum/shorten-url/internal/service"
 	"github.com/yandex-practicum/shorten-url/pkg/audit"
+	"go.uber.org/zap"
 )
 
 // Handler хендлер для работы с url
@@ -71,7 +71,8 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		http.Error(w, "failed to shorten", http.StatusInternalServerError)
+		g.Log.Error("failed to shorten", zap.Error(err))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -93,8 +94,8 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ShortenJSON сокращение url-a при передачи json
-func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
+// ShortenURL сокращение url-a при передачи json
+func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	h.validateJSONMethod(w, r)
 
 	var request model.Request
@@ -129,7 +130,8 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
 	if fail := enc.Encode(response); fail != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("failed to encode response", zap.Error(err))
 		return
 	}
 }
@@ -146,7 +148,8 @@ func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 
 	results, err := h.shortener.ShortenBatch(reqs, getUserID(r))
 	if err != nil {
-		http.Error(w, "failed to shorten", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("failed to shorten", zap.Error(err))
 		return
 	}
 
@@ -154,13 +157,14 @@ func (h *Handler) BatchShorten(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if fail := json.NewEncoder(w).Encode(results); fail != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("failed to encode response", zap.Error(err))
 		return
 	}
 }
 
-// Redirect редирект на оригинальную ссылку
-func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
+// ExpandURL редирект на оригинальную ссылку
+func (h *Handler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "id")
 
 	u, err := h.shortener.Resolve(code)
@@ -185,8 +189,8 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u.Original, http.StatusTemporaryRedirect)
 }
 
-// GetURLS получение всех сокращенных url по пользователю
-func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
+// ListUserURLs получение всех сокращенных url по пользователю
+func (h *Handler) ListUserURLs(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	if userID == "" {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -196,7 +200,7 @@ func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		log.Println("Error while getting urls", err)
+		g.Log.Error("Error while getting urls", zap.Error(err))
 		return
 	}
 
@@ -209,7 +213,8 @@ func (h *Handler) GetURLS(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if fail := json.NewEncoder(w).Encode(results); fail != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("failed to encode response", zap.Error(err))
 		return
 	}
 }
@@ -231,7 +236,8 @@ func (h *Handler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 
 	err := h.shortener.DeleteUserURLs(userID, codes)
 	if err != nil {
-		http.Error(w, "failed to delete urls", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("failed to delete urls", zap.Error(err))
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -245,11 +251,32 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	err := h.db.PingContext(ctx)
 
 	if err != nil {
-		http.Error(w, "failed to ping database", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("failed to ping database", zap.Error(err))
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// GetInternalStats получение внутренней статистики сервиса
+func (h *Handler) GetInternalStats(w http.ResponseWriter, r *http.Request) {
+	urlsCount, err := h.shortener.GetTotalURLs(r.Context())
+	usersCount, err := h.shortener.GetTotalUsers(r.Context())
+
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		g.Log.Error("Error while getting internal stats", zap.Error(err))
+		return
+	}
+
+	response := model.StatsResponse{
+		URLs:  urlsCount,
+		Users: usersCount,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *Handler) validateJSONMethod(w http.ResponseWriter, r *http.Request) {

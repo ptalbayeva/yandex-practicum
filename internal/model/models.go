@@ -45,6 +45,12 @@ type URLResponse struct {
 	OriginalURL string `json:"original_url"`
 }
 
+// StatsResponse ответ статистики по сокращенному урлу и пользователей в сервисе
+type StatsResponse struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}
+
 // NewURL создание объекта url-а
 func NewURL(code, original string, uid *string, userID string, isDeleted bool) *URL {
 	url := &URL{

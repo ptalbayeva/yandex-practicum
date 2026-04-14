@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/yandex-practicum/shorten-url/pkg/proto";
+
+service ShortenerService {
+  rpc ShortenURL (URLShortenRequest) returns (URLShortenResponse);
+  rpc ExpandURL (URLExpandRequest) returns (URLExpandResponse);
+  rpc ListUserURLs (ListUserURLsRequest) returns (UserURLsResponse);
+}
+
+message URLShortenResponse {
+  string id = 1;
+  string short_url = 2;
+}
+
+message URLExpandResponse {
+  string url = 1;
+}
+
+message URLRef {
+  string id = 1;
+  string short_url = 2;
+}
+
+message URLShortenRequest {
+  string url = 1;
+}
+
+message URLExpandRequest {
+  string id = 1;
+}
+
+message ListUserURLsRequest {}
+
+message UserURLsResponse {
+  repeated URLRef urls = 1;
+}

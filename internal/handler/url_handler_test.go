@@ -119,7 +119,7 @@ func Test_Shorten(t *testing.T) {
 		})
 	}
 }
-func TestHandler_ShortenJSON(t *testing.T) {
+func TestHandler_ShortenURL(t *testing.T) {
 	repo := repository.NewMemoryRepo()
 	deleteURL := service.NewDeleteURLService(repo, 100)
 	handler := &Handler{
@@ -129,7 +129,7 @@ func TestHandler_ShortenJSON(t *testing.T) {
 			*deleteURL,
 		),
 	}
-	h := http.HandlerFunc(handler.ShortenJSON)
+	h := http.HandlerFunc(handler.ShortenURL)
 	srv := httptest.NewServer(h)
 
 	type want struct {
@@ -277,7 +277,7 @@ func getTestRouter(t *testing.T, url *model.URL) chi.Router {
 	deleteURL := service.NewDeleteURLService(repo, 100)
 	s := service.NewShortenerService(repo, testC.BaseURL, *deleteURL)
 	noopAudit := audit.NewNoopPublisher()
-	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}, noopAudit).Redirect)
+	handler := http.HandlerFunc(NewHandler(s, &sql.DB{}, noopAudit).ExpandURL)
 
 	r.Get("/{id}", handler)
 
